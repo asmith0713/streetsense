@@ -1,6 +1,6 @@
 // client/src/pages/MapPage.jsx
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import API from '../api';
@@ -26,7 +26,13 @@ function MapClick({ onClick }) {
   });
   return null;
 }
-
+function MapInstanceSetter({ setMap }) {
+    const map = useMap();
+    useEffect(() => {
+      setMap(map);
+    }, [map, setMap]);
+    return null;
+}
 const CATEGORY_OPTIONS = [
   'all',
   'safety',
@@ -86,6 +92,7 @@ export default function MapPage() {
   useEffect(() => {
     if (autoRefresh) startAutoRefresh();
     else stopAutoRefresh();
+    return () => stopAutoRefresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, refreshInterval]);
 
@@ -271,8 +278,9 @@ export default function MapPage() {
           center={pos}
           zoom={15}
           style={{ height: '70vh' }}
-          whenCreated={map => setMapInstance(map)}
+        //   whenCreated={map => setMapInstance(map)}
         >
+          <MapInstanceSetter setMap={setMapInstance} />
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <MapClick onClick={handleMapClick} />
 

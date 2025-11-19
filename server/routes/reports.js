@@ -54,26 +54,36 @@ router.get('/', async (req, res) => {
 
 // POST /api/reports  (multipart/form-data or JSON)
 router.post('/', upload.single('photo'), async (req, res) => {
-  try {
-    const { title, description = '', category = 'other', lat, lng, timeOfDay } = req.body;
-    if (!title || !lat || !lng) return res.status(400).json({ error: 'title, lat and lng required' });
-
-    const photoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.photoUrl || null;
-    const rep = new Report({
-      title: title.trim(),
-      description: description.trim(),
-      category,
-      location: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
-      timeOfDay: timeOfDay || computeTimeOfDay(),
-      photoUrl
-    });
-    await rep.save();
-    res.json({ success: true, report: rep });
-  } catch (err) {
-    console.error('POST /api/reports', err);
-    res.status(500).json({ error: 'server error' });
-  }
-});
+    try {
+      const { title, description = '', category = 'other', lat, lng, timeOfDay } = req.body;
+      if (!title || !lat || !lng) return res.status(400).json({ error: 'title, lat and lng required' });
+  
+      const latitude = parseFloat(lat);
+      const longitude = parseFloat(lng);
+      
+      // Validate coordinates
+      if (isNaN(latitude) || isNaN(longitude) || 
+          latitude < -90 || latitude > 90 || 
+          longitude < -180 || longitude > 180) {
+        return res.status(400).json({ error: 'Invalid coordinates' });
+      }
+  
+      const photoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.photoUrl || null;
+      const rep = new Report({
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        location: { type: 'Point', coordinates: [longitude, latitude] },
+        timeOfDay: timeOfDay || computeTimeOfDay(),
+        photoUrl
+      });
+      await rep.save();
+      res.json({ success: true, report: rep });
+    } catch (err) {
+      console.error('POST /api/reports', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
 
 // POST /api/reports/:id/upvote
 router.post('/:id/upvote', async (req, res) => {
@@ -132,9 +142,11 @@ router.head('/export', (req, res) => {
   
       const reports = await Report.find(filter).lean();
   
-      // Build CSV
+      const fileName = `reports_export_${Date.now()}.csv`;
+      const filePath = path.join(UPLOAD_DIR, fileName);
+      
       const csvWriter = createObjectCsvWriter({
-        path: path.join(UPLOAD_DIR, `reports_export_${Date.now()}.csv`),
+        path: filePath,
         header: [
           { id: '_id', title: 'id' },
           { id: 'title', title: 'title' },
@@ -163,9 +175,15 @@ router.head('/export', (req, res) => {
       }));
   
       await csvWriter.writeRecords(records);
-      const fileName = fs.readdirSync(UPLOAD_DIR).filter(f => f.startsWith('reports_export_')).pop();
-      const filePath = path.join(UPLOAD_DIR, fileName);
-      res.download(filePath);
+      
+      // Send file and delete after
+      res.download(filePath, `streetsense_reports_${Date.now()}.csv`, (err) => {
+        if (err) console.error('Download error:', err);
+        // Clean up the file after sending
+        fs.unlink(filePath, (unlinkErr) => {
+          if (unlinkErr) console.error('File cleanup error:', unlinkErr);
+        });
+      });
     } catch (err) {
       console.error('GET export', err);
       res.status(500).json({ error: 'server error' });

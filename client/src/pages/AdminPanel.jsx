@@ -5,13 +5,15 @@ import ConfirmModal from '../components/ConfirmModal';
 import Lightbox from '../components/Lightbox';
 
 function resolveImageUrl(photoUrl) {
-  if (!photoUrl) return null;
-  if (photoUrl.startsWith('/uploads') || photoUrl.startsWith('/api/uploads')) {
-    return `${BACKEND_URL}${photoUrl}`;
+    if (!photoUrl) return null;
+    if (photoUrl.startsWith('/uploads') || photoUrl.startsWith('/api/uploads')) {
+      return `${BACKEND_URL}${photoUrl}`;
+    }
+    if (photoUrl.startsWith('http')) return photoUrl;
+    // ignore absolute disk paths
+    if (photoUrl.startsWith('/mnt/') || /^[A-Za-z]:\\/.test(photoUrl)) return null;
+    return `${BACKEND_URL}/${photoUrl.replace(/^\//, '')}`;
   }
-  if (photoUrl.startsWith('http')) return photoUrl;
-  return `${BACKEND_URL}/${photoUrl.replace(/^\//, '')}`;
-}
 
 export default function AdminPanel() {
   const [password, setPassword] = useState(sessionStorage.getItem('streetsense_admin_pwd') || '');
@@ -46,23 +48,25 @@ export default function AdminPanel() {
     }
   }
 
-  function checkPassword() {
+  async function checkPassword() {
     if (!password) return alert('Enter admin password');
-    // try to verify by hitting HEAD export endpoint (server supports HEAD)
-    fetch(`/api/reports/export?admin_password=${encodeURIComponent(password)}`, { method: 'HEAD' })
-      .then(resp => {
-        if (resp.ok) {
-          sessionStorage.setItem('streetsense_admin_pwd', password);
-          setAuthorized(true);
-          loadReports();
-        } else {
-          alert('Invalid password');
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        alert('Failed to verify password');
+
+    try {
+      // FIX: Use API.head instead of fetch. 
+      // This uses the baseURL defined in api.js (http://localhost:5000/api)
+      await API.head('/reports/export', {
+        params: { admin_password: password }
       });
+
+      // If request succeeds (status 200), authorize
+      sessionStorage.setItem('streetsense_admin_pwd', password);
+      setAuthorized(true);
+      loadReports();
+    } catch (err) {
+      console.error(err);
+      // If request fails (status 401 or 500), deny
+      alert('Invalid password');
+    }
   }
 
   function logout() {

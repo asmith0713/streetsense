@@ -9,7 +9,9 @@ export default function ClusterLayer({ map, reports }) {
   useEffect(() => {
     if (!map) return;
 
-    const markers = L.markerClusterGroup();
+    const markers = L.markerClusterGroup(
+        {showCoverageOnHover: false,}
+    );
 
     reports.forEach(r => {
       const marker = L.marker([r.coords[1], r.coords[0]]);
@@ -22,6 +24,7 @@ export default function ClusterLayer({ map, reports }) {
     map.addLayer(markers);
 
     return () => {
+      markers.clearLayers();  
       map.removeLayer(markers);
     };
   }, [map, reports]);
