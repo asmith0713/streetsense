@@ -19,6 +19,7 @@ server/build/
 # Uploads
 server/uploads/
 server/*.csv
+server/data/
 
 # OS
 .DS_Store
