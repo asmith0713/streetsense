@@ -19,7 +19,7 @@ This project was developed by:
 - 👍 **Community Upvoting** - Validate important issues
 - 🛡️ **Admin Panel** - Moderate and track issue resolution
 - 📱 **Responsive Design** - Works on all devices
-- 🔐 **User Authentication** - Secure login/register system
+- 🔐 **User Authentication** - Email/password + Google OAuth sign-in
 
 ## Tech Stack
 
@@ -36,6 +36,7 @@ This project was developed by:
 - Node.js + Express
 - MongoDB + Mongoose
 - JWT Authentication
+- Google OAuth 2.0
 - Multer (File uploads)
 - bcrypt (Password hashing)
 - Rate limiting & Helmet (Security)
@@ -56,7 +57,7 @@ cd /home/asmith/LOM/Hack\ This\ Fest/streetsense
 
 2. **Configure Environment Variables**
 
-Copy the example env file:
+**Server configuration:**
 ```bash
 cp .env.example server/.env
 ```
@@ -67,7 +68,21 @@ MONGO_URI=mongodb://localhost:27017/streetsense
 JWT_SECRET=your-long-random-secret-key
 ADMIN_PASSWORD=your-admin-password
 CORS_ORIGIN=http://localhost:3000
+GOOGLE_CLIENT_ID=your-google-oauth-client-id  # Optional: for Google Sign-In
 ```
+
+**Client configuration:**
+```bash
+cp client/.env.example client/.env
+```
+
+Edit `client/.env`:
+```env
+REACT_APP_BACKEND_URL=http://localhost:5000
+REACT_APP_GOOGLE_CLIENT_ID=your-google-oauth-client-id  # Optional: for Google Sign-In
+```
+
+**Note:** For Google OAuth setup, see [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md)
 
 3. **Install Server Dependencies**
 ```bash

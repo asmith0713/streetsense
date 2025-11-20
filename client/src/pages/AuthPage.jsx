@@ -1,6 +1,7 @@
 // client/src/pages/AuthPage.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
 import API from '../api';
 
 export default function AuthPage() {
@@ -21,6 +22,8 @@ export default function AuthPage() {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user_id', res.data.user.id);
       localStorage.setItem('user_email', res.data.user.email);
+      if (res.data.user.name) localStorage.setItem('user_name', res.data.user.name);
+      if (res.data.user.picture) localStorage.setItem('user_picture', res.data.user.picture);
       
       // Dispatch custom event to update navigation
       window.dispatchEvent(new Event('authChange'));
@@ -38,6 +41,39 @@ export default function AuthPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      const res = await API.post('/auth/google', {
+        credential: credentialResponse.credential
+      });
+
+      // Store authentication data
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user_id', res.data.user.id);
+      localStorage.setItem('user_email', res.data.user.email);
+      if (res.data.user.name) localStorage.setItem('user_name', res.data.user.name);
+      if (res.data.user.picture) localStorage.setItem('user_picture', res.data.user.picture);
+
+      // Dispatch custom event to update navigation
+      window.dispatchEvent(new Event('authChange'));
+
+      console.log('Successfully logged in with Google!');
+      navigate('/map');
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Google authentication failed. Please try again.';
+      alert(errorMsg);
+      console.error('Google auth error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error('Google Sign-In failed');
+    alert('Google Sign-In failed. Please try again.');
   };
 
   return (
@@ -93,6 +129,25 @@ export default function AuthPage() {
                     )}
                   </button>
                 </form>
+
+                <div className="position-relative my-4">
+                  <hr className="border-secondary" />
+                  <span className="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small">
+                    OR
+                  </span>
+                </div>
+
+                <div className="d-flex justify-content-center mb-3">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    useOneTap
+                    text={isLogin ? 'signin_with' : 'signup_with'}
+                    shape="rectangular"
+                    size="large"
+                    width="100%"
+                  />
+                </div>
 
                 <div className="text-center mt-3">
                   <p className="small text-muted mb-0">

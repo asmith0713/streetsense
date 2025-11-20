@@ -109,4 +109,76 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// POST /api/auth/google - Google OAuth login/register
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ message: 'Google credential is required' });
+    }
+
+    if (!googleClient) {
+      return res.status(503).json({ message: 'Google authentication is not configured on the server' });
+    }
+
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Unable to get email from Google account' });
+    }
+
+    // Check if user exists
+    let user = await User.findOne({ 
+      $or: [{ googleId }, { email: email.toLowerCase() }] 
+    });
+
+    if (user) {
+      // User exists - update Google info if needed
+      if (!user.googleId && user.authProvider === 'local') {
+        // Link Google account to existing local account
+        user.googleId = googleId;
+        user.authProvider = 'google';
+        user.name = name;
+        user.picture = picture;
+        await user.save();
+      }
+    } else {
+      // Create new user
+      user = new User({
+        email: email.toLowerCase(),
+        googleId,
+        name,
+        picture,
+        authProvider: 'google'
+      });
+      await user.save();
+    }
+
+    // Create JWT token
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture
+      }
+    });
+
+  } catch (err) {
+    console.error('Google Auth Error:', err);
+    res.status(500).json({ message: 'Google authentication failed' });
+  }
+});
+
 module.exports = router;
