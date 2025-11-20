@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import MapPage from './pages/MapPage';
 import AdminPanel from './pages/AdminPanel';
@@ -9,8 +9,28 @@ import './App.css';
 
 function Navigation() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
   const isLanding = location.pathname === '/';
   const isAuth = location.pathname === '/auth'; 
+
+  // Check authentication status
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const email = localStorage.getItem('user_email');
+    setIsLoggedIn(!!token);
+    setUserEmail(email || '');
+  }, [location]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('user_email');
+    setIsLoggedIn(false);
+    setUserEmail('');
+    navigate('/');
+  };
 
   if (isAuth) return null; 
 
@@ -35,9 +55,27 @@ function Navigation() {
             <li className="nav-item">
               <Link className="nav-link" to="/admin">Admin</Link>
             </li>
-            {!isLanding && (
+            {isLoggedIn ? (
+              <>
+                <li className="nav-item ms-md-2">
+                  <span className="navbar-text text-white-50 small me-2">
+                    <i className="bi bi-person-circle"></i> {userEmail.split('@')[0]}
+                  </span>
+                </li>
+                <li className="nav-item">
+                  <button 
+                    onClick={handleLogout} 
+                    className="btn btn-outline-light btn-sm fw-semibold px-3"
+                  >
+                    <i className="bi bi-box-arrow-right"></i> Logout
+                  </button>
+                </li>
+              </>
+            ) : !isLanding && (
               <li className="nav-item ms-md-2">
-                <Link to="/auth" className="btn btn-light btn-sm fw-semibold text-primary px-3">Login</Link>
+                <Link to="/auth" className="btn btn-light btn-sm fw-semibold text-primary px-3">
+                  <i className="bi bi-box-arrow-in-right"></i> Login
+                </Link>
               </li>
             )}
           </ul>

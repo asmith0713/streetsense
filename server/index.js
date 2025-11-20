@@ -19,7 +19,7 @@ app.use(helmet({
 const corsOptions = {
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true,
-  optionsSuccessStatus: 200.
+  optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -74,6 +74,8 @@ if (missing.length > 0) {
   console.error(`Missing required environment variables: ${missing.join(', ')}`);
   process.exit(1);
 }
+
+
 
 const PORT = process.env.PORT || 5000;
 

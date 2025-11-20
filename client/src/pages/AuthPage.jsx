@@ -16,11 +16,22 @@ export default function AuthPage() {
     try {
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
       const res = await API.post(endpoint, { email, password });
+      
+      // Store authentication data
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user_id', res.data.user.id);
+      localStorage.setItem('user_email', res.data.user.email);
+      
+      // Show success message
+      const action = isLogin ? 'logged in' : 'registered';
+      console.log(`Successfully ${action}!`);
+      
+      // Navigate to map
       navigate('/map');
     } catch (err) {
-      alert(err.response?.data?.message || 'Authentication failed.');
+      const errorMsg = err.response?.data?.message || 'Authentication failed. Please try again.';
+      alert(errorMsg);
+      console.error('Auth error:', err);
     } finally {
       setLoading(false);
     }

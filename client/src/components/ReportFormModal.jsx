@@ -38,13 +38,13 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
 
   return (
     <>
-      <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1"
+      <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999 }} tabIndex="-1"
         onClick={(e)=>{
           if(e.target === e.currentTarget) onClose();
         }}
       >
-        <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content">
+        <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable" style={{ margin: '1rem' }}>
+          <div className="modal-content" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
             <div className="modal-header">
               <h5 className="modal-title">New Report</h5>
               <button type="button" className="btn-close" onClick={onClose}></button>

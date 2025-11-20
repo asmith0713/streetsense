@@ -7,14 +7,18 @@ const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      return res.status(401).json({ error: 'No token, authorization denied' });
+      // Allow request to proceed without user info
+      req.user = null;
+      return next();
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'Token is not valid' });
+    // Invalid token, but allow request to proceed
+    req.user = null;
+    next();
   }
 };
 

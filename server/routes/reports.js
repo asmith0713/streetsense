@@ -142,9 +142,20 @@ router.put('/:id/status', mutationLimiter, authMiddleware, async (req, res) => {
 // Helper function to verify admin
 const verifyAdmin = (req, res, next) => {
   const adminPass = req.headers['x-admin-password'];
-  if (!process.env.ADMIN_PASSWORD || adminPass !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  
+  if (!adminPass) {
+    return res.status(401).json({ error: 'Admin password required' });
   }
+  
+  if (!process.env.ADMIN_PASSWORD) {
+    console.error('ADMIN_PASSWORD not set in environment variables');
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+  
+  if (adminPass !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Invalid admin password' });
+  }
+  
   next();
 };
 

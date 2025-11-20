@@ -43,12 +43,28 @@ export default function ReportCard({ report, onUpdated }) {
     }
   }
 
+  const getStatusBadge = () => {
+    const statusColors = {
+      open: 'warning',
+      verified: 'info',
+      resolved: 'success'
+    };
+    return <span className={`badge bg-${statusColors[status] || 'secondary'} text-uppercase`}>{status}</span>;
+  };
+
   return (
-    <div style={{ minWidth: 220 }}>
-      <strong>{report.title}</strong>
-      <div style={{ fontSize: 13, color: '#333', margin: '6px 0' }}>{report.description}</div>
-      <div style={{ fontSize: 12, color: '#666' }}>Category: {report.category}</div>
-      <div style={{ fontSize: 12, color: '#666' }}>Status: {status}</div>
+    <div style={{ minWidth: 220, maxWidth: 300 }}>
+      <div className="d-flex justify-content-between align-items-start mb-2">
+        <strong style={{ fontSize: 15 }}>{report.title}</strong>
+        {getStatusBadge()}
+      </div>
+      {report.description && (
+        <div style={{ fontSize: 13, color: '#555', marginBottom: 8, lineHeight: 1.4 }}>{report.description}</div>
+      )}
+      <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
+        <i className="bi bi-tag me-1"></i>
+        <span className="badge bg-light text-dark">{report.category}</span>
+      </div>
 
       {imageSrc && !imageError ? (
         <div style={{ marginTop: 8 }}>
@@ -79,10 +95,32 @@ export default function ReportCard({ report, onUpdated }) {
         </div>
       ) : null}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-      <button onClick={handleUpvote} className="btn" disabled={upvoting}>{upvoting ? 'Upvoting...' : `Upvote (${upvotes})`}</button>
-      <button onClick={() => changeStatus('verified')} className="btn" disabled={changingStatus}>Mark Verified</button>
-      <button onClick={() => changeStatus('resolved')} className="btn" disabled={changingStatus}>Mark Resolved</button>
+      <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+        <button
+          onClick={handleUpvote}
+          className="btn btn-sm btn-outline-primary"
+          disabled={upvoting}
+          style={{ flex: '1 1 auto' }}
+        >
+          <i className="bi bi-hand-thumbs-up me-1"></i>
+          {upvoting ? '...' : upvotes}
+        </button>
+        <button
+          onClick={() => changeStatus('verified')}
+          className="btn btn-sm btn-outline-info"
+          disabled={changingStatus}
+          style={{ flex: '1 1 auto' }}
+        >
+          Verify
+        </button>
+        <button
+          onClick={() => changeStatus('resolved')}
+          className="btn btn-sm btn-outline-success"
+          disabled={changingStatus}
+          style={{ flex: '1 1 auto' }}
+        >
+          Resolve
+        </button>
       </div>
     </div>
   );

@@ -19,14 +19,21 @@ router.post('/register', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ message: 'Please enter all fields' });
     }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+    
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
     // Check for existing user
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ message: 'User already exists with this email' });
     }
 
     // Hash password
@@ -64,19 +71,19 @@ router.post('/login', async (req, res) => {
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({ message: 'Please enter all fields' });
+      return res.status(400).json({ message: 'Please enter email and password' });
     }
 
-    // Check for user
-    const user = await User.findOne({ email });
+    // Check for user (case-insensitive email lookup)
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
-      return res.status(400).json({ message: 'User does not exist' });
+      return res.status(400).json({ message: 'Invalid email or password' });
     }
 
     // Validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(400).json({ message: 'Invalid email or password' });
     }
 
     // Create token

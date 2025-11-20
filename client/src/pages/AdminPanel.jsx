@@ -11,7 +11,7 @@ function resolveImageUrl(photoUrl) {
   if (photoUrl.startsWith('uploads/')) return `${BACKEND_URL}/${photoUrl}`;
   if (photoUrl.startsWith('/mnt/') || photoUrl.startsWith('/var/') || 
       photoUrl.startsWith('C:\\') || photoUrl.startsWith('D:\\') ||
-      /^[A-Za-z]:[\\\/]/.test(photoUrl)) {
+      /^[A-Za-z]:[\\/]/.test(photoUrl)) {
     console.warn('Ignoring server file system path:', photoUrl);
     return null;
   }
@@ -51,6 +51,11 @@ export default function AdminPanel() {
   }
 
   async function checkPassword() {
+    if (!password || password.trim() === '') {
+      alert('Please enter admin password');
+      return;
+    }
+    
     try {
       // Test auth by making a HEAD request with header
       await API.head('/reports/export', { 
@@ -59,8 +64,13 @@ export default function AdminPanel() {
       sessionStorage.setItem('streetsense_admin_pwd', password);
       setAuthorized(true);
       loadReports();
-    } catch (err) { 
-      alert('Invalid password'); 
+    } catch (err) {
+      console.error('Admin auth error:', err);
+      const errorMsg = err.response?.status === 401 
+        ? 'Invalid admin password. Access denied.' 
+        : 'Failed to verify admin credentials. Please try again.';
+      alert(errorMsg);
+      setPassword('');
     }
   }
 
@@ -169,7 +179,7 @@ export default function AdminPanel() {
 
   return (
     <div className="container py-4" style={{marginTop: '70px'}}>
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 admin-header">
         <h2 className="h4 mb-0">Moderation Dashboard</h2>
         <button className="btn btn-outline-danger btn-sm" onClick={() => {
           sessionStorage.removeItem('streetsense_admin_pwd');
@@ -181,7 +191,7 @@ export default function AdminPanel() {
 
       <div className="card shadow-sm mb-4">
         <div className="card-body">
-          <div className="row g-3 align-items-end">
+          <div className="row g-3 align-items-end admin-filters">
             <div className="col-md-3 col-6">
               <label className="form-label small fw-bold text-muted">Category</label>
               <select className="form-select form-select-sm" value={csvCategory} onChange={e => setCsvCategory(e.target.value)}>
