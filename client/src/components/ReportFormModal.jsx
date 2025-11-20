@@ -8,13 +8,41 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
 
   function submit(e) {
     e.preventDefault();
-    if (!title) return alert('Title is required');
+    
+    // Validate title
+    if (!title || title.trim().length === 0) {
+      return alert('Title is required');
+    }
+    
+    if (title.length > 200) {
+      return alert('Title must be less than 200 characters');
+    }
+    
+    // Validate description
+    if (description.length > 2000) {
+      return alert('Description must be less than 2000 characters');
+    }
+    
+    // Validate coordinates
+    if (isNaN(lat) || isNaN(lng)) {
+      return alert('Invalid location coordinates');
+    }
+    
+    // Validate photo size
+    if (photo && photo.size > 5 * 1024 * 1024) {
+      return alert('Image must be less than 5MB');
+    }
+    
     onSubmit({ title, description, category, lat, lng, photo });
   }
 
   return (
     <>
-      <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+      <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1"
+        onClick={(e)=>{
+          if(e.target === e.currentTarget) onClose();
+        }}
+      >
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header">

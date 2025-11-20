@@ -1,49 +1,21 @@
 import React, { useState } from 'react';
-import API, { BACKEND_URL } from '../api';
+import API from '../api';
+import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function ReportCard({ report, onUpdated }) {
   const [upvotes, setUpvotes] = useState(report.upvotes || 0);
   const [status, setStatus] = useState(report.status || 'open');
   const [imageError, setImageError] = useState(false);
+  const [upvoting, setUpvoting] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
 
-  function resolveImageUrl(photoUrl) {
-    if (!photoUrl) return null;
-    
-    // Remove any leading/trailing whitespace
-    photoUrl = photoUrl.trim();
-    
-    // If it's already a full URL, use it
-    if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
-      return photoUrl;
-    }
-    
-    // If it starts with /uploads or /api/uploads, append to BACKEND_URL
-    if (photoUrl.startsWith('/uploads') || photoUrl.startsWith('/api/uploads')) {
-      return `${BACKEND_URL}${photoUrl}`;
-    }
-    
-    // If it starts with 'uploads' (no slash), add the slash
-    if (photoUrl.startsWith('uploads/')) {
-      return `${BACKEND_URL}/${photoUrl}`;
-    }
-    
-    // Ignore absolute disk paths (server file system paths)
-    if (photoUrl.startsWith('/mnt/') || 
-        photoUrl.startsWith('/var/') ||
-        photoUrl.startsWith('C:\\') || 
-        photoUrl.startsWith('D:\\') ||
-        /^[A-Za-z]:[\\\/]/.test(photoUrl)) {
-      console.warn('Ignoring server file system path:', photoUrl);
-      return null;
-    }
-    
-    // Default: assume it's a relative path and append to BACKEND_URL
-    return `${BACKEND_URL}/${photoUrl.replace(/^\//, '')}`;
-  }
+  
 
   const imageSrc = resolveImageUrl(report.photoUrl);
 
   async function handleUpvote() {
+    if (upvoting) return; // Prevent double-click
+    setUpvoting(true);
     try {
       const res = await API.post(`/reports/${report._id}/upvote`);
       setUpvotes(res.data.upvotes);
@@ -51,10 +23,14 @@ export default function ReportCard({ report, onUpdated }) {
     } catch (err) {
       console.error('Upvote failed', err);
       alert('Failed to upvote');
+    } finally {
+      setUpvoting(false);
     }
   }
 
   async function changeStatus(newStatus) {
+    if (changingStatus) return; // Prevent double-click
+    setChangingStatus(true);
     try {
       await API.put(`/reports/${report._id}/status`, { status: newStatus });
       setStatus(newStatus);
@@ -62,6 +38,8 @@ export default function ReportCard({ report, onUpdated }) {
     } catch (err) {
       console.error('Status update failed', err);
       alert('Failed to change status');
+    } finally {
+      setChangingStatus(false);
     }
   }
 
@@ -102,9 +80,9 @@ export default function ReportCard({ report, onUpdated }) {
       ) : null}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-        <button onClick={handleUpvote} className="btn">Upvote ({upvotes})</button>
-        <button onClick={() => changeStatus('verified')} className="btn">Mark Verified</button>
-        <button onClick={() => changeStatus('resolved')} className="btn">Mark Resolved</button>
+      <button onClick={handleUpvote} className="btn" disabled={upvoting}>{upvoting ? 'Upvoting...' : `Upvote (${upvotes})`}</button>
+      <button onClick={() => changeStatus('verified')} className="btn" disabled={changingStatus}>Mark Verified</button>
+      <button onClick={() => changeStatus('resolved')} className="btn" disabled={changingStatus}>Mark Resolved</button>
       </div>
     </div>
   );

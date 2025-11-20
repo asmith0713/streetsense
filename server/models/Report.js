@@ -16,4 +16,8 @@ const ReportSchema = new mongoose.Schema({
   upvotes: { type: Number, default: 0 }
 }, { timestamps: true });
 
+ReportSchema.index({ timestamp: -1, category: 1, status: 1 });
+ReportSchema.index({ status: 1 });
+ReportSchema.index({ category: 1 });
+
 module.exports = mongoose.model('Report', ReportSchema);

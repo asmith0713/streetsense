@@ -15,8 +15,14 @@ export default function ClusterLayer({ map, reports }) {
 
     reports.forEach(r => {
       const marker = L.marker([r.coords[1], r.coords[0]]);
+      const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      };
+      
       marker.bindPopup(
-        `<b>${r.title}</b><br>${r.description}<br><i>${r.category}</i>`
+        `<b>${escapeHtml(r.title)}</b><br>${escapeHtml(r.description)}<br><i>${escapeHtml(r.category)}</i>`
       );
       markers.addLayer(marker);
     });

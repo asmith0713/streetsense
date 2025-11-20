@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, ZoomControl, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import API from '../api';
@@ -12,6 +12,8 @@ import HeatLegend from '../components/HeatLegend';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+import { REFRESH_INTERVAL, USER_LOCATION_RADIUS, MAP_DEFAULT_ZOOM, MAP_TRACKING_ZOOM } from '../constants';
 
 // Fix Leaflet default icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -51,7 +53,7 @@ function RecenterMap({ position }) {
   const map = useMap();
   useEffect(() => {
     if (position) {
-      map.flyTo(position, 15, {
+      map.flyTo(position, MAP_TRACKING_ZOOM, {
         duration: 1.5
       });
     }
@@ -91,21 +93,64 @@ export default function MapPage() {
   }, []);
   
   useEffect(() => {
+    // Clear any existing interval first
+    if (refreshTimerRef.current) {
+      clearInterval(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+    
     if (autoRefresh) {
       refreshTimerRef.current = setInterval(() => { 
         loadReports(); 
         loadHeatmap(); 
-      }, 15000);
-    } else {
-      clearInterval(refreshTimerRef.current);
+      }, REFRESH_INTERVAL);
     }
-    return () => clearInterval(refreshTimerRef.current);
-  }, [autoRefresh]);
+    
+    return () => {
+      if (refreshTimerRef.current) {
+        clearInterval(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [autoRefresh, loadReports, loadHeatmap]);
+
+  const loadReports = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (categoryFilter !== 'all') params.append('categories', categoryFilter);
+      if (timeFilter !== 'all') params.append('since', getTimeDate(timeFilter));
+      
+      const res = await API.get(`/reports?${params.toString()}`);
+      const features = res.data.features || [];
+      setReports(features.map(f => ({
+        ...f.properties,
+        coords: f.geometry?.coordinates || [78.396, 17.447]
+      })));
+    } catch (err) { 
+      console.error('Load reports error:', err); 
+    } finally { 
+      setLoading(false); 
+    }
+  }, [categoryFilter, timeFilter]);
+
+  const loadHeatmap = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (categoryFilter !== 'all') params.append('categories', categoryFilter);
+      if (timeFilter !== 'all') params.append('since', getTimeDate(timeFilter));
+      
+      const res = await API.get(`/reports/heat?${params.toString()}`);
+      setHeatPoints(res.data.points || []);
+    } catch (err) { 
+      console.error('Load heatmap error:', err); 
+    }
+  }, [categoryFilter, timeFilter]);
 
   useEffect(() => { 
     loadReports(); 
     loadHeatmap(); 
-  }, [categoryFilter, timeFilter]);
+  }, [categoryFilter, timeFilter, loadReports, loadHeatmap]);
 
   // Get user's current location
   function getUserLocation() {
@@ -155,6 +200,10 @@ export default function MapPage() {
         console.error('Location tracking error:', error);
         setLocationError(getLocationErrorMessage(error.code));
         setTrackingLocation(false);
+        if(watchIdRef.current) {
+          navigator.geolocation.clearWatch(watchIdRef.current);
+          watchIdRef.current = null;
+        }
       },
       {
         enableHighAccuracy: true,
@@ -186,38 +235,9 @@ export default function MapPage() {
     }
   }
 
-  async function loadReports() {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (categoryFilter !== 'all') params.append('categories', categoryFilter);
-      if (timeFilter !== 'all') params.append('since', getTimeDate(timeFilter));
-      
-      const res = await API.get(`/reports?${params.toString()}`);
-      const features = res.data.features || [];
-      setReports(features.map(f => ({
-        ...f.properties,
-        coords: f.geometry?.coordinates || [78.396, 17.447]
-      })));
-    } catch (err) { 
-      console.error('Load reports error:', err); 
-    } finally { 
-      setLoading(false); 
-    }
-  }
+  // Removed duplicate loadReports function
 
-  async function loadHeatmap() {
-    try {
-      const params = new URLSearchParams();
-      if (categoryFilter !== 'all') params.append('categories', categoryFilter);
-      if (timeFilter !== 'all') params.append('since', getTimeDate(timeFilter));
-      
-      const res = await API.get(`/reports/heat?${params.toString()}`);
-      setHeatPoints(res.data.points || []);
-    } catch (err) { 
-      console.error('Load heatmap error:', err); 
-    }
-  }
+  // Removed duplicate loadHeatmap function
 
   function getTimeDate(filter) {
     const now = new Date();
@@ -241,9 +261,10 @@ export default function MapPage() {
         }
       });
       await API.post('/reports', form);
+      
+      // Wait for data to reload before closing
+      await Promise.all([loadReports(), loadHeatmap()]);
       setShowForm(false);
-      loadReports(); 
-      loadHeatmap();
     } catch (err) { 
       console.error('Submit error:', err);
       alert('Failed to submit report'); 
@@ -251,7 +272,8 @@ export default function MapPage() {
   }
 
   return (
-    <div className="map-wrapper d-flex flex-column h-100 w-100 position-relative">
+    <div className="map-page-container">
+      <div className='map-wrapper d-flex flex-column h-100 w-100 position-relative'>
       {/* Top Controls */}
       <div className="position-absolute top-0 start-0 end-0 p-3 z-3" style={{pointerEvents: 'none'}}>
         <div className="card shadow-sm border-0 mx-auto" style={{maxWidth: '800px', pointerEvents: 'auto'}}>
@@ -336,8 +358,17 @@ export default function MapPage() {
         className="btn btn-primary rounded-circle shadow position-absolute z-3 d-flex align-items-center justify-content-center"
         style={{bottom: '30px', right: '20px', width: '60px', height: '60px'}}
         onClick={() => {
-          // Use user's location if available, otherwise use current map center
-          const reportLocation = userLocation || pos;
+          let reportLocation;
+          if (userLocation) {
+            reportLocation = userLocation;
+          } else if (mapInstance) {
+          // Use map center if location not available
+          const center = mapInstance.getCenter();
+          reportLocation = [center.lat, center.lng];
+          } else {
+          reportLocation = pos; // Fallback to default
+          }
+  
           setFormLatLng(reportLocation);
           setShowForm(true);
         }}
@@ -348,7 +379,7 @@ export default function MapPage() {
 
       <MapContainer 
         center={pos} 
-        zoom={13} 
+        zoom={MAP_DEFAULT_ZOOM} 
         className="flex-grow-1 h-100 w-100" 
         zoomControl={false}
         whenReady={() => console.log('Map ready')}
@@ -378,7 +409,7 @@ export default function MapPage() {
             </Marker>
             <Circle
               center={userLocation}
-              radius={100}
+              radius={USER_LOCATION_RADIUS}
               pathOptions={{
                 color: '#4285F4',
                 fillColor: '#4285F4',
@@ -415,6 +446,7 @@ export default function MapPage() {
           onSubmit={onSubmit} 
         />
       )}
+      </div>
     </div>
   );
 }

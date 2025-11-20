@@ -17,19 +17,22 @@ router.get('/', async (req, res) => {
       timestamp: 1,
       upvotes: 1
     }).lean();
-
+    
     // Convert to heatmap points: [lat, lng, intensity]
-    const points = reports.map(r => {
-      const lng = r.location.coordinates[0];
-      const lat = r.location.coordinates[1];
-      const intensity = 1 + Math.log(1 + (r.upvotes || 0));
-      return [lat, lng, intensity];
-    });
+    // Filter out reports with invalid coordinates
+    const points = reports
+      .filter(r => r.location && r.location.coordinates && r.location.coordinates.length === 2)
+      .map(r => {
+        const lng = r.location.coordinates[0];
+        const lat = r.location.coordinates[1];
+        const intensity = 1 + Math.log(1 + (r.upvotes || 0));
+        return [lat, lng, intensity];
+      });
 
     res.json({ points });
   } catch (err) {
     console.error('Heat endpoint error:', err);
-    res.status(500).json({ error: 'server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

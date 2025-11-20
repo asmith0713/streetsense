@@ -27,6 +27,10 @@ code {
   min-height: 0;
 }
 
+.map-page-container {
+  padding-top: 70px;
+}
+
 .leaflet-container {
   width: 100%;
   height: 100%;

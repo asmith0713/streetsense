@@ -52,8 +52,9 @@ export default function AdminPanel() {
 
   async function checkPassword() {
     try {
+      // Test auth by making a HEAD request with header
       await API.head('/reports/export', { 
-        params: { admin_password: password } 
+        headers: { 'x-admin-password': password }
       });
       sessionStorage.setItem('streetsense_admin_pwd', password);
       setAuthorized(true);
@@ -93,18 +94,21 @@ export default function AdminPanel() {
 
   async function downloadCSV() {
     try {
-      const params = new URLSearchParams({
-        admin_password: password
-      });
+      const body = {};
       
-      if (csvCategory !== 'all') params.append('categories', csvCategory);
+      if (csvCategory !== 'all') body.categories = csvCategory;
       if (csvTime !== 'all') {
         const since = getTimeDate(csvTime);
-        if (since) params.append('since', since);
+        if (since) body.since = since;
       }
       
-      const response = await fetch(`${BACKEND_URL}/api/reports/export?${params}`, {
-        method: 'GET',
+      const response = await fetch(`${BACKEND_URL}/api/reports/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': password
+        },
+        body: JSON.stringify(body)
       });
       
       if (!response.ok) {
@@ -217,6 +221,14 @@ export default function AdminPanel() {
       {loading ? (
         <div className="text-center py-5">
           <div className="spinner-border text-primary"></div>
+        </div>
+      ) : reports.length === 0?(
+        <div className="col-12">
+          <div className="text-center py-5">
+            <i className="bi bi-inbox" style={{fontSize: '3rem', color: '#ccc'}}></i>
+            <h4 className="mt-3 text-muted">No reports found</h4>
+            <p className="text-muted">Try adjusting your filters</p>
+          </div>
         </div>
       ) : (
         <div className="row g-4">
