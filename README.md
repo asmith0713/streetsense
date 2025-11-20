@@ -6,10 +6,10 @@ A full-stack web application for reporting and tracking civic issues like pothol
 
 This project was developed by:
 
-- **[Your Name]** - [@asmith0713](https://github.com/asmith0713)
-- **[Friend's Name]** - [GitHub/LinkedIn Profile]
+- **Asmith Maramreddy** - [@asmith0713](https://github.com/asmith0713)
+- **Niteesh Reddy Kancharla** - [niteesh206](https://github.com/niteesh206)
 
-*A collaborative project for Hack This Fest*
+*A collaborative project for Hack This Fest 2025*
 
 ## Features
 
