@@ -1,3 +1,4 @@
+// client/src/App.js
 import React from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
@@ -5,34 +6,45 @@ import MapPage from './pages/MapPage';
 import AdminPanel from './pages/AdminPanel';
 import AuthPage from './pages/AuthPage'; 
 import './index.css';
-import './App.css';
+// import './App.css'; // You can likely remove App.css or keep it for very specific overrides
 
 function Navigation() {
   const location = useLocation();
   const isLanding = location.pathname === '/';
   const isAuth = location.pathname === '/auth'; 
 
-  // Don't show the main navigation bar on the Auth page
   if (isAuth) return null; 
 
-  // We change the header style based on whether we are on the landing page or app
-  const headerStyle = isLanding 
-    ? { position: 'absolute', top: 0, left: 0, right: 0, background: 'transparent', zIndex: 10 }
-    : { background: '#0b5cff', color: 'white' };
-
-  const brandStyle = isLanding ? { color: '#1a1a1a' } : { color: 'white' };
-  const linkClass = isLanding ? 'nav-link-landing' : 'nav-link';
-
   return (
-    <header className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', ...headerStyle }}>
-      <div style={{ fontWeight: 700, fontSize: '1.2rem', ...brandStyle }}>StreetSense</div>
-      <nav style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-        <Link to="/" className={linkClass}>Home</Link>
-        <Link to="/map" className={linkClass}>Live Map</Link>
-        <Link to="/admin" className={linkClass}>Admin</Link>
-        {!isLanding && <Link to="/auth" className={linkClass}>Login</Link>}
-      </nav>
-    </header>
+    <nav className={`navbar navbar-expand-md ${isLanding ? 'navbar-dark fixed-top' : 'navbar-dark bg-primary shadow-sm'}`} 
+         style={isLanding ? { backgroundColor: 'rgba(0,0,0,0.1)' } : {}}>
+      <div className="container-fluid px-4">
+        <Link className="navbar-brand fw-bold d-flex align-items-center" to="/">
+          <i className="bi bi-map-fill me-2"></i> StreetSense
+        </Link>
+        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span className="navbar-toggler-icon"></span>
+        </button>
+        <div className="collapse navbar-collapse" id="navbarNav">
+          <ul className="navbar-nav ms-auto align-items-center gap-2">
+            <li className="nav-item">
+              <Link className="nav-link" to="/">Home</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/map">Live Map</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/admin">Admin</Link>
+            </li>
+            {!isLanding && (
+              <li className="nav-item ms-md-2">
+                <Link to="/auth" className="btn btn-light btn-sm fw-semibold text-primary px-3">Login</Link>
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
+    </nav>
   );
 }
 
@@ -40,7 +52,7 @@ export default function App() {
   return (
     <div className="app-container">
       <Navigation />
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <main className="flex-grow-1 d-flex flex-column position-relative overflow-hidden">
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />

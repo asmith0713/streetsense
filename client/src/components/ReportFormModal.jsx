@@ -13,39 +13,47 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
   }
 
   return (
-    <div className="modal">
-      <form className="modal-content" onSubmit={submit}>
-        <h3>New Report</h3>
-        <div className="row">
-          <label>Location</label>
-          <div className="muted">{lat.toFixed(5)}, {lng.toFixed(5)}</div>
+    <>
+      <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">New Report</h5>
+              <button type="button" className="btn-close" onClick={onClose}></button>
+            </div>
+            <form onSubmit={submit}>
+              <div className="modal-body">
+                <div className="mb-3">
+                    <small className="text-muted"><i className="bi bi-geo-alt"></i> {lat.toFixed(5)}, {lng.toFixed(5)}</small>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Title</label>
+                  <input className="form-control" value={title} onChange={e => setTitle(e.target.value)} required placeholder="e.g., Pothole on Main St" />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Category</label>
+                  <select className="form-select" value={category} onChange={e => setCategory(e.target.value)}>
+                    {['safety','traffic','water','garbage','noise','stray','other'].map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                  </select>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Description</label>
+                  <textarea className="form-control" rows="2" value={description} onChange={e => setDescription(e.target.value)}></textarea>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Photo</label>
+                  <input type="file" className="form-control" accept="image/*" onChange={e => setPhoto(e.target.files[0])} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Submit Report</button>
+              </div>
+            </form>
+          </div>
         </div>
-
-        <label>Title</label>
-        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Pothole by bus stop" required />
-
-        <label>Description</label>
-        <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Short details (optional)" />
-
-        <label>Category</label>
-        <select value={category} onChange={e => setCategory(e.target.value)}>
-          <option value="safety">Safety</option>
-          <option value="traffic">Traffic</option>
-          <option value="water">Water</option>
-          <option value="garbage">Garbage</option>
-          <option value="noise">Noise</option>
-          <option value="stray">Stray Animals</option>
-          <option value="other">Other</option>
-        </select>
-
-        <label>Photo (optional)</label>
-        <input type="file" accept="image/*" onChange={e => setPhoto(e.target.files[0])} />
-
-        <div className="modal-actions">
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn primary">Submit</button>
-        </div>
-      </form>
-    </div>
+      </div>
+      <div className="modal-backdrop show"></div>
+    </>
   );
 }
