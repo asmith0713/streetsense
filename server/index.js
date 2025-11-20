@@ -8,44 +8,37 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 dotenv.config();
-// Add after dotenv.config()
-if (!process.env.MONGO_URI) {
-    console.error('MONGO_URI environment variable is required');
-    process.exit(1);
-  }
-  if (!process.env.ADMIN_PASSWORD) {
-    console.warn('WARNING: ADMIN_PASSWORD not set - admin features will be disabled');
-  }
 const app = express();
-app.set('trust proxy', 1); // trust first proxy
+
+// Trust proxy for rate limiter behind Nginx/Docker
+app.set('trust proxy', 1);
 
 app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
-  }));
-app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    credentials: true
-  }));
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+app.use(cors());
 app.use(express.json());
 
-// static uploads folder (for demo only)
+// static uploads folder & data folder
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/data', express.static(path.join(__dirname, 'data')));
 
-
-// small rate limit: 100 requests per 15 minutes per IP (tweakable)
+// Rate limiting
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    message: { error: 'Too many requests from this IP, try later.' }
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests from this IP, try later.' }
 });
 app.use('/api/', apiLimiter);
 
-const heatRouter = require('./routes/heat');
-app.use('/api/reports/heat', heatRouter);
-// routes
+// Routes
 const reportsRouter = require('./routes/reports');
+const heatRouter = require('./routes/heat');
+const authRouter = require('./routes/auth');
+
+app.use('/api/reports/heat', heatRouter);
 app.use('/api/reports', reportsRouter);
+app.use('/api/auth', authRouter); // New Auth Routes
 
 // basic health
 app.get('/health', (req, res) => res.json({ ok: true, now: new Date().toISOString() }));
