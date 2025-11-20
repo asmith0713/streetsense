@@ -2,13 +2,19 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+
 if (!JWT_SECRET) {
   console.error('FATAL ERROR: JWT_SECRET is required.');
   process.exit(1);
 }
+
+// Initialize Google OAuth client
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
