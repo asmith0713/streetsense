@@ -1,4 +1,3 @@
-// client/src/App.js
 import React from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
@@ -6,7 +5,7 @@ import MapPage from './pages/MapPage';
 import AdminPanel from './pages/AdminPanel';
 import AuthPage from './pages/AuthPage'; 
 import './index.css';
-// import './App.css'; // You can likely remove App.css or keep it for very specific overrides
+import './App.css';
 
 function Navigation() {
   const location = useLocation();
