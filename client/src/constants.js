@@ -11,6 +11,10 @@ export const CATEGORIES = [
   'garbage',
   'noise',
   'stray',
+  'harassment',
+  'eve-teasing',
+  'assault',
+  'stalking',
   'other'
 ];
 

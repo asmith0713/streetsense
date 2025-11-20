@@ -61,8 +61,26 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
                 <div className="mb-3">
                   <label className="form-label">Category</label>
                   <select className="form-select" value={category} onChange={e => setCategory(e.target.value)}>
-                    {['safety','traffic','water','garbage','noise','stray','other'].map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                    <option value="safety">Safety</option>
+                    <option value="traffic">Traffic</option>
+                    <option value="water">Water</option>
+                    <option value="garbage">Garbage</option>
+                    <option value="noise">Noise</option>
+                    <option value="stray">Stray Animals</option>
+                    <optgroup label="Women's Safety">
+                      <option value="harassment">Harassment</option>
+                      <option value="eve-teasing">Eve-Teasing</option>
+                      <option value="assault">Assault</option>
+                      <option value="stalking">Stalking</option>
+                    </optgroup>
+                    <option value="other">Other</option>
                   </select>
+                  {['harassment', 'eve-teasing', 'assault', 'stalking'].includes(category) && (
+                    <small className="text-danger mt-1 d-block">
+                      <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                      For immediate emergencies, use the SOS button instead
+                    </small>
+                  )}
                 </div>
                 <div className="mb-3">
                   <label className="form-label">Description</label>
