@@ -10,7 +10,24 @@ const UserSchema = new mongoose.Schema({
   },
   password: { 
     type: String, 
-    required: true 
+    required: false // Not required for Google OAuth users
+  },
+  googleId: {
+    type: String,
+    sparse: true, // Allow null but unique when present
+    unique: true
+  },
+  name: {
+    type: String,
+    trim: true
+  },
+  picture: {
+    type: String
+  },
+  authProvider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local'
   },
   createdAt: { 
     type: Date, 

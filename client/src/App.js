@@ -10,18 +10,40 @@ import './App.css';
 function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    // Initialize from localStorage
+    return !!localStorage.getItem('token');
+  });
+  const [userEmail, setUserEmail] = useState(() => {
+    return localStorage.getItem('user_email') || '';
+  });
+  
   const isLanding = location.pathname === '/';
   const isAuth = location.pathname === '/auth'; 
 
-  // Check authentication status
+  // Check authentication status on mount and when storage changes
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const email = localStorage.getItem('user_email');
-    setIsLoggedIn(!!token);
-    setUserEmail(email || '');
-  }, [location]);
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      const email = localStorage.getItem('user_email');
+      setIsLoggedIn(!!token);
+      setUserEmail(email || '');
+    };
+
+    // Check on mount
+    checkAuth();
+
+    // Listen for storage events (login/logout in other tabs)
+    window.addEventListener('storage', checkAuth);
+    
+    // Custom event for same-tab updates
+    window.addEventListener('authChange', checkAuth);
+
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+      window.removeEventListener('authChange', checkAuth);
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -29,6 +51,9 @@ function Navigation() {
     localStorage.removeItem('user_email');
     setIsLoggedIn(false);
     setUserEmail('');
+    
+    // Dispatch custom event for auth change
+    window.dispatchEvent(new Event('authChange'));
     navigate('/');
   };
 

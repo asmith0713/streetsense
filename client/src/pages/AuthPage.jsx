@@ -22,6 +22,9 @@ export default function AuthPage() {
       localStorage.setItem('user_id', res.data.user.id);
       localStorage.setItem('user_email', res.data.user.email);
       
+      // Dispatch custom event to update navigation
+      window.dispatchEvent(new Event('authChange'));
+      
       // Show success message
       const action = isLogin ? 'logged in' : 'registered';
       console.log(`Successfully ${action}!`);
