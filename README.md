@@ -1,6 +1,6 @@
-# StreetSense - Civic Issue Reporting Platform
+# StreetSense - Civic Issue Reporting & Women's Safety Platform
 
-A full-stack web application for reporting and tracking civic issues like potholes, garbage, and safety hazards with real-time mapping, heatmaps, and community upvoting.
+A full-stack web application for reporting civic issues and enhancing women's safety through real-time crowd density mapping. Know where people are for safer navigation.
 
 ## Team
 
@@ -11,15 +11,29 @@ This project was developed by:
 
 *A collaborative project for Hack This Fest 2025*
 
+## 🛡️ Safety Features (Women's Safety Focus)
+
+- 👥 **Real-time Crowd Heatmap** - See where people are located for safer route planning
+- 🟢 **Safety Zones** - Green areas indicate more people = safer areas
+- 📍 **Location Broadcasting** - Opt-in to share your location and help create safe zones
+- 📊 **Active User Count** - Know how many people are nearby in real-time
+- 🔒 **Privacy First** - Location data auto-expires after 5 minutes
+- 🚨 **Safety Reports** - Report safety concerns and hazards with geolocation
+
+**Use Case**: Women can check the crowd heatmap before walking alone. Green areas show where more people are present, indicating safer routes.
+
 ## Features
 
 - 🗺️ **Interactive Map** - Report issues by clicking on the map
-- 🔥 **Heat Maps** - Visualize problem density
+- 🔥 **Issue Heat Maps** - Visualize problem density
 - 📊 **Clustering** - View grouped reports for better overview
 - 👍 **Community Upvoting** - Validate important issues
 - 🛡️ **Admin Panel** - Moderate and track issue resolution
 - 📱 **Responsive Design** - Works on all devices
 - 🔐 **User Authentication** - Email/password + Google OAuth sign-in
+- 🔗 **Location Sharing** - Share your location via link
+- 📍 **Live Tracking** - Real-time location tracking with "Find Me" feature
+- ⚡ **Production Ready** - Security hardened with rate limiting, HTTPS, and monitoring
 
 ## Tech Stack
 
@@ -131,9 +145,44 @@ docker-compose down
 ```
 
 Access:
-- Client: `http://localhost:5173`
+- Client: `http://localhost:3000`
 - Server: `http://localhost:5000`
 - MongoDB: `localhost:27017`
+
+## 🛡️ Using Safety Features
+
+### For Women & Safety-Conscious Users
+
+**Step 1: Enable Location**
+1. Open the map at http://localhost:3000/map
+2. Click the "Find Me" button (📍 crosshair icon) or "Live Tracking"
+3. Allow browser location permission
+
+**Step 2: View Safety Heatmap**
+1. Click the green "Show Safety Map" button (top controls)
+2. The map now shows crowd density with color coding:
+   - 🟢 **Green**: High crowd density = Safer areas
+   - 🟡 **Yellow**: Medium crowd density
+   - 🔵 **Blue**: Low crowd density = Less safe
+3. Check the legend for active user count
+
+**Step 3: Contribute to Safety (Optional)**
+1. Click "Share Location" button (when location is enabled)
+2. Your anonymous location is broadcast to help others
+3. You're now contributing to the safety heatmap!
+4. Your location auto-expires after 5 minutes for privacy
+
+**Step 4: Plan Safe Routes**
+- Look for green zones when planning your walk
+- Avoid dark/blue areas when alone
+- Share your location with friends using the share button
+
+### Privacy & Security
+- ✅ Your location is **anonymous** (no personal data)
+- ✅ Data **auto-deletes** after 5 minutes
+- ✅ You can **opt-out** anytime
+- ✅ **No tracking** when you stop broadcasting
+- ✅ Works on **HTTPS only** for security
 
 ## API Endpoints
 
@@ -147,6 +196,12 @@ Access:
 - `POST /api/reports/:id/upvote` - Upvote report (requires auth)
 - `PUT /api/reports/:id/status` - Update status (requires auth)
 - `GET /api/reports/heat` - Get heatmap data
+
+### User Locations (Safety Feature)
+- `POST /api/locations` - Update user location for crowd heatmap (requires auth)
+- `GET /api/locations/heatmap` - Get crowd density heatmap data
+- `GET /api/locations/stats` - Get active user statistics
+- `DELETE /api/locations/mine` - Remove your location from map (requires auth)
 
 ### Admin
 - `HEAD /api/reports/export` - Check admin auth
@@ -267,18 +322,43 @@ kill -9 <PID>
 - MongoDB Compass is great for viewing database state
 - Use React DevTools to inspect component state
 
+## 🚀 Production Deployment
+
+For detailed production deployment instructions including:
+- SSL/TLS configuration
+- Nginx reverse proxy setup
+- MongoDB Atlas configuration
+- Docker Compose production settings
+- Security hardening
+- Monitoring & health checks
+
+**See [PRODUCTION_DEPLOY.md](PRODUCTION_DEPLOY.md)**
+
+### Quick Production Checklist
+- ✅ Use MongoDB Atlas or secure MongoDB instance
+- ✅ Enable HTTPS with Let's Encrypt
+- ✅ Set strong JWT_SECRET (32+ characters)
+- ✅ Configure CORS for production domain
+- ✅ Set up Google OAuth for production
+- ✅ Enable rate limiting (configured)
+- ✅ Set up automated backups
+- ✅ Configure monitoring (health endpoints included)
+- ✅ Use environment variables (never commit .env)
+
 ## Security Notes
 
-⚠️ **Before deploying to production:**
+⚠️ **Production Security Features:**
 
-1. Change all default passwords
-2. Use strong, random JWT_SECRET
-3. Enable HTTPS
-4. Set up proper CORS origins
-5. Use environment-specific configs
-6. Enable rate limiting (already configured)
-7. Review and sanitize user inputs
-8. Set up MongoDB authentication
+- ✅ Helmet.js security headers
+- ✅ HTTPS enforcement (HSTS)
+- ✅ Content Security Policy
+- ✅ Rate limiting (100 requests/15min by default)
+- ✅ Input validation & sanitization
+- ✅ JWT authentication with secure secrets
+- ✅ Password hashing with bcrypt
+- ✅ MongoDB injection prevention
+- ✅ File upload restrictions (5MB, images only)
+- ✅ Geospatial data privacy (auto-expires after 5 min)
 
 ## Contributing
 
@@ -298,4 +378,6 @@ For issues, questions, or contributions, please open an issue on the repository.
 
 ---
 
-Built with ❤️ for better civic engagement
+**Built with ❤️ for better civic engagement and women's safety**
+
+*Empowering communities through technology. Know where people are, feel safer together.*

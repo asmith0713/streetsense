@@ -18,8 +18,9 @@ export default function AuthPage() {
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
       const res = await API.post(endpoint, { email, password });
       
-      // Store authentication data
+      // Store authentication data with consistent keys
       localStorage.setItem('token', res.data.token);
+      localStorage.setItem('streetsense_token', res.data.token);
       localStorage.setItem('user_id', res.data.user.id);
       localStorage.setItem('user_email', res.data.user.email);
       if (res.data.user.name) localStorage.setItem('user_name', res.data.user.name);
@@ -50,8 +51,9 @@ export default function AuthPage() {
         credential: credentialResponse.credential
       });
 
-      // Store authentication data
+      // Store authentication data with consistent keys
       localStorage.setItem('token', res.data.token);
+      localStorage.setItem('streetsense_token', res.data.token);
       localStorage.setItem('user_id', res.data.user.id);
       localStorage.setItem('user_email', res.data.user.email);
       if (res.data.user.name) localStorage.setItem('user_name', res.data.user.name);

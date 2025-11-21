@@ -95,9 +95,12 @@ export default function AdminPanel() {
 
   async function performStatusChange() {
     if (!confirmPayload) return;
+    const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
     try {
       await API.put(`/reports/${confirmPayload.id}/status`, { 
         status: confirmPayload.status 
+      }, {
+        headers: { 'x-admin-password': adminPassword }
       });
       setConfirmOpen(false);
       setConfirmPayload(null);
@@ -330,8 +333,14 @@ export default function AdminPanel() {
                       <small className="text-muted">
                         <i className="bi bi-clock"></i> {new Date(r.timestamp).toLocaleDateString()}
                       </small>
-                      <small className="text-muted">
-                        <i className="bi bi-hand-thumbs-up"></i> {r.upvotes || 0}
+                      <small className="text-success">
+                        <i className="bi bi-hand-thumbs-up-fill"></i> {r.upvotes || 0}
+                      </small>
+                      <small className="text-danger">
+                        <i className="bi bi-hand-thumbs-down-fill"></i> {r.downvotes || 0}
+                      </small>
+                      <small className="fw-bold text-primary">
+                        Net: {(r.upvotes || 0) - (r.downvotes || 0)}
                       </small>
                     </div>
                     <div className="d-flex justify-content-end gap-2">

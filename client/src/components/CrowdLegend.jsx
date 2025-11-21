@@ -34,10 +34,10 @@ export default function CrowdLegend({ activeUserCount }) {
         </div>
       </div>
 
-      {activeUserCount !== undefined && (
+      {activeUserCount !== undefined && activeUserCount !== null && (
         <div className="alert alert-success py-2 px-2 mb-0 mt-2" style={{ fontSize: '0.8rem' }}>
           <i className="bi bi-shield-check me-1"></i>
-          <strong>{activeUserCount}</strong> people nearby
+          <strong>{activeUserCount}</strong> {activeUserCount === 1 ? 'person' : 'people'} nearby
         </div>
       )}
 

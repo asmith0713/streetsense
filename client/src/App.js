@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage';
 import MapPage from './pages/MapPage';
 import AdminPanel from './pages/AdminPanel';
 import AuthPage from './pages/AuthPage'; 
+import ProfilePage from './pages/ProfilePage';
 import './index.css';
 import './App.css';
 
@@ -11,8 +12,8 @@ function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    // Initialize from localStorage
-    return !!localStorage.getItem('token');
+    // Check both token keys for backward compatibility
+    return !!(localStorage.getItem('token') || localStorage.getItem('streetsense_token'));
   });
   const [userEmail, setUserEmail] = useState(() => {
     return localStorage.getItem('user_email') || '';
@@ -24,7 +25,7 @@ function Navigation() {
   // Check authentication status on mount and when storage changes
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token') || localStorage.getItem('streetsense_token');
       const email = localStorage.getItem('user_email');
       setIsLoggedIn(!!token);
       setUserEmail(email || '');
@@ -46,9 +47,13 @@ function Navigation() {
   }, []);
 
   const handleLogout = () => {
+    // Clear all authentication tokens
     localStorage.removeItem('token');
+    localStorage.removeItem('streetsense_token');
     localStorage.removeItem('user_id');
     localStorage.removeItem('user_email');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('user_picture');
     setIsLoggedIn(false);
     setUserEmail('');
     
@@ -60,11 +65,12 @@ function Navigation() {
   if (isAuth) return null; 
 
   return (
-    <nav className={`navbar navbar-expand-md ${isLanding ? 'navbar-dark fixed-top' : 'navbar-dark bg-primary shadow-sm'}`} 
-         style={isLanding ? { backgroundColor: 'rgba(0,0,0,0.1)' } : {}}>
-      <div className="container-fluid px-4">
-        <Link className="navbar-brand fw-bold d-flex align-items-center" to="/">
-          <i className="bi bi-map-fill me-2"></i> StreetSense
+    <nav className={`navbar navbar-expand-md ${isLanding ? 'navbar-landing fixed-top' : 'navbar-dark bg-primary shadow-sm'}`} 
+         style={isLanding ? { backgroundColor: 'rgba(11, 92, 255, 0.95)', backdropFilter: 'blur(10px)' } : {}}>
+      <div className="container-fluid px-3 px-md-4">
+        <Link className="navbar-brand fw-bold d-flex align-items-center brand-logo" to="/">
+          <i className="bi bi-map-fill me-2 brand-icon"></i>
+          <span className="brand-text">StreetSense</span>
         </Link>
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
           <span className="navbar-toggler-icon"></span>
@@ -77,6 +83,13 @@ function Navigation() {
             <li className="nav-item">
               <Link className="nav-link" to="/map">Live Map</Link>
             </li>
+            {isLoggedIn && (
+              <li className="nav-item">
+                <Link className="nav-link" to="/profile">
+                  <i className="bi bi-person-circle me-1"></i> Profile
+                </Link>
+              </li>
+            )}
             <li className="nav-item">
               <Link className="nav-link" to="/admin">Admin</Link>
             </li>
@@ -119,6 +132,7 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/map" element={<MapPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </main>

@@ -52,6 +52,13 @@ router.get('/', async (req, res) => {
   try {
     const { bbox, categories, since, limit = 100 } = req.query;
     const filter = {};
+    
+    // Hide resolved reports from map view for end users (admin can see all)
+    const isAdmin = req.headers['x-admin-password'] === process.env.ADMIN_PASSWORD;
+    if (!isAdmin) {
+      filter.status = { $ne: 'resolved' }; // Exclude resolved reports
+    }
+    
     if (categories) filter.category = { $in: categories.split(',') };
     if (since) filter.timestamp = { $gte: new Date(since) };
     if (bbox) {
@@ -111,20 +118,86 @@ router.post('/',mutationLimiter, authMiddleware, upload.single('photo'), async (
   });
 
 // POST /api/reports/:id/upvote
-router.post('/:id/upvote',mutationLimiter, authMiddleware, async (req, res) => {
+router.post('/:id/upvote', mutationLimiter, authMiddleware, async (req, res) => {
   try {
-    const rep = await Report.findByIdAndUpdate(req.params.id, { $inc: { upvotes: 1 } }, { new: true });
-    if (!rep) return res.status(404).json({ error: 'not found' });
-    res.json({ success: true, upvotes: rep.upvotes });
+    const { id } = req.params;
+    
+    // Validate authentication
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Authentication required to vote' });
+    }
+    
+    // Validate ObjectId format
+    if (!id || id === 'undefined' || !/^[0-9a-fA-F]{24}$/.test(id)) {
+      return res.status(400).json({ error: 'Invalid report ID format' });
+    }
+    
+    const rep = await Report.findByIdAndUpdate(
+      id, 
+      { $inc: { upvotes: 1 } }, 
+      { new: true, runValidators: true }
+    );
+    
+    if (!rep) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+    
+    res.json({ 
+      success: true, 
+      upvotes: rep.upvotes || 0, 
+      downvotes: rep.downvotes || 0 
+    });
   } catch (err) {
-    console.error('POST upvote', err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('POST upvote error:', err);
+    res.status(500).json({ message: 'Failed to upvote report' });
   }
 });
 
-// PUT /api/reports/:id/status  body: { status }
-router.put('/:id/status', mutationLimiter, authMiddleware, async (req, res) => {
+// POST /api/reports/:id/downvote
+router.post('/:id/downvote', mutationLimiter, authMiddleware, async (req, res) => {
   try {
+    const { id } = req.params;
+    
+    // Validate authentication
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Authentication required to vote' });
+    }
+    
+    // Validate ObjectId format
+    if (!id || id === 'undefined' || !/^[0-9a-fA-F]{24}$/.test(id)) {
+      return res.status(400).json({ error: 'Invalid report ID format' });
+    }
+    
+    const rep = await Report.findByIdAndUpdate(
+      id, 
+      { $inc: { downvotes: 1 } }, 
+      { new: true, runValidators: true }
+    );
+    
+    if (!rep) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+    
+    res.json({ 
+      success: true, 
+      upvotes: rep.upvotes || 0, 
+      downvotes: rep.downvotes || 0 
+    });
+  } catch (err) {
+    console.error('POST downvote error:', err);
+    res.status(500).json({ message: 'Failed to downvote report' });
+  }
+});
+
+// PUT /api/reports/:id/status  body: { status } - ADMIN ONLY
+router.put('/:id/status', mutationLimiter, async (req, res) => {
+  try {
+    // Check admin password
+    const adminPassword = req.headers['x-admin-password'];
+    if (!adminPassword || adminPassword !== process.env.ADMIN_PASSWORD) {
+      return res.status(401).json({ error: 'Admin access required' });
+    }
+
     const { status } = req.body;
     if (!['open','verified','resolved'].includes(status)) return res.status(400).json({ error: 'invalid status' });
     const rep = await Report.findByIdAndUpdate(req.params.id, { status }, { new: true });

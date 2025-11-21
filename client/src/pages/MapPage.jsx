@@ -251,9 +251,16 @@ export default function MapPage() {
       localStorage.setItem('streetsense_share_location', 'true');
     }
 
+    // Auto-request location immediately on app load
+    if (!userLocation && !watchIdRef.current) {
+      const timer = setTimeout(() => {
+        requestInitialLocation();
+      }, 500); // Small delay to ensure component is mounted
+      return () => clearTimeout(timer);
+    }
+
     // Auto-start tracking if it was previously enabled
-    if (trackingLocation && !watchIdRef.current) {
-      // Delay to ensure map is ready
+    if (trackingLocation && !watchIdRef.current && userLocation) {
       const timer = setTimeout(() => {
         startTracking();
       }, 1000);
@@ -261,6 +268,37 @@ export default function MapPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount - intentionally ignoring deps for initialization
+
+  const requestInitialLocation = () => {
+    if (!navigator.geolocation) {
+      console.warn('Geolocation not supported');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const newPos = [latitude, longitude];
+        setUserLocation(newPos);
+        setPos(newPos);
+        console.log('Initial location acquired:', newPos);
+        
+        // Optionally start tracking automatically
+        if (localStorage.getItem('streetsense_tracking') === 'true') {
+          startTracking();
+        }
+      },
+      (error) => {
+        console.warn('Initial location request failed:', error.message);
+        // Don't show error to user, just silently fail
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 60000
+      }
+    );
+  };
 
   // 3. Effect: Cleanup Location Tracking on Unmount
   useEffect(() => {
@@ -524,32 +562,40 @@ export default function MapPage() {
                   setShowCrowdHeatmap(newValue);
                   localStorage.setItem('streetsense_crowd_heatmap', newValue.toString());
                 }}
-                title="Show crowd density for safety awareness"
+                title="Show crowd density heatmap - see where more people are for safety awareness"
               >
                 <i className="bi bi-people-fill"></i> {showCrowdHeatmap ? 'Hide' : 'Show'} Safety Map
               </button>
               
-              {/* Share Location Toggle - Always On for Safety */}
-              {userLocation && (
-                <button 
-                  className="btn btn-sm btn-info position-relative"
-                  onClick={() => {
-                    const newValue = !shareLocationEnabled;
-                    setShareLocationEnabled(newValue);
-                    localStorage.setItem('streetsense_share_location', newValue.toString());
-                  }}
-                  title="Broadcasting location for women's safety - helps others see crowded safe areas"
-                >
-                  <i className={`bi ${shareLocationEnabled ? 'bi-broadcast' : 'bi-broadcast-pin'}`}></i>
-                  {shareLocationEnabled ? ' Broadcasting' : ' Broadcast Off'}
-                  {shareLocationEnabled && (
-                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">
-                      <span className="visually-hidden">Broadcasting</span>
-                      <span className="d-inline-block" style={{width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'white'}}></span>
+              {/* Share Location Broadcasting - Sends location to crowd map */}
+              <button 
+                className={`btn btn-sm ${shareLocationEnabled ? 'btn-info' : 'btn-outline-info'} position-relative`}
+                onClick={() => {
+                  const newValue = !shareLocationEnabled;
+                  setShareLocationEnabled(newValue);
+                  localStorage.setItem('streetsense_share_location', newValue.toString());
+                  
+                  if (newValue && userLocation) {
+                    // Immediately update location when enabling
+                    const [lat, lng] = userLocation;
+                    updateUserLocation(lat, lng);
+                  }
+                }}
+                title={shareLocationEnabled 
+                  ? "Your location is being shared on the safety map - helping others see safe crowded areas" 
+                  : "Click to share your location on the safety map - helps create safer community awareness"}
+              >
+                <i className={`bi ${shareLocationEnabled ? 'bi-broadcast' : 'bi-broadcast-pin'}`}></i>
+                {' '}{shareLocationEnabled ? 'Broadcasting' : 'Start Broadcasting'}
+                {shareLocationEnabled && (
+                  <span className="position-absolute top-0 start-100 translate-middle p-1">
+                    <span className="position-relative d-flex h-100 w-100">
+                      <span className="animate-ping position-absolute d-inline-flex h-100 w-100 rounded-circle bg-success opacity-75"></span>
+                      <span className="position-relative d-inline-flex rounded-circle h-100 w-100 bg-success" style={{width: '8px', height: '8px'}}></span>
                     </span>
-                  )}
-                </button>
-              )}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -567,25 +613,29 @@ export default function MapPage() {
 
       {/* --- LOCATION BROADCASTING INFO --- */}
       {shareLocationEnabled && userLocation && (
-        <div className="position-fixed bottom-0 start-0 m-3 z-3 pointer-events-auto" style={{maxWidth: '300px'}}>
+        <div className="position-fixed bottom-0 start-0 m-3 z-3 pointer-events-auto" style={{maxWidth: '320px'}}>
           <div className="alert alert-success alert-dismissible fade show shadow-sm mb-0 py-2 px-3" role="alert">
-            <div className="d-flex align-items-center">
-              <i className="bi bi-shield-check-fill me-2 fs-5"></i>
+            <button type="button" className="btn-close" onClick={() => {
+              setShareLocationEnabled(false);
+              localStorage.setItem('streetsense_share_location', 'false');
+            }}></button>
+            <div className="d-flex align-items-start">
+              <i className="bi bi-broadcast-pin me-2 fs-5 mt-1"></i>
               <div className="small">
-                <strong>Safety Mode Active</strong>
+                <strong>Broadcasting Location</strong>
                 <br />
-                <small className="text-muted">Your location is helping create a safer community map</small>
+                <small className="text-muted">Your location is visible on the Safety Map, helping others identify safer, more populated areas.</small>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* --- SHARE SUCCESS TOAST --- */}
+      {/* --- SHARE LINK SUCCESS TOAST --- */}
       {showShareToast && (
         <div className="position-absolute top-0 start-50 translate-middle-x mt-5 z-3 pointer-events-auto">
           <div className="alert alert-success alert-dismissible fade show shadow-sm py-2" role="alert">
-            <i className="bi bi-check-circle-fill me-2"></i> Location link copied to clipboard!
+            <i className="bi bi-check-circle-fill me-2"></i> Location link copied! Share it with others.
             <button type="button" className="btn-close py-2" onClick={() => setShowShareToast(false)}></button>
           </div>
         </div>
@@ -614,13 +664,13 @@ export default function MapPage() {
             <i className={`bi ${trackingLocation ? 'bi-geo-alt-fill' : 'bi-geo-alt'} fs-5`}></i>
           </button>
 
-          {/* Share Location */}
+          {/* Share Location Link */}
           {userLocation && (
             <button
               className="btn btn-light rounded-circle shadow d-flex align-items-center justify-content-center border-0"
               style={{width: '48px', height: '48px'}}
               onClick={shareLocation}
-              title="Share my location"
+              title="Share location link - copy URL to share with others"
             >
               <i className="bi bi-share fs-5 text-dark"></i>
             </button>
@@ -628,8 +678,8 @@ export default function MapPage() {
         </div>
 
         {trackingLocation && (
-          <div className="badge bg-primary text-white px-2 py-1 shadow-sm align-self-start">
-            Live Tracking On
+          <div className="badge bg-primary text-white px-3 py-2 shadow-sm align-self-start">
+            <i className="bi bi-geo-alt-fill me-1"></i> Live Tracking Active
           </div>
         )}
       </div>
@@ -731,7 +781,17 @@ export default function MapPage() {
         onEmergencyCreated={(data) => {
           console.log('Emergency created:', data);
           // Optionally refetch data or show notification
-        }} 
+        }}
+        onLocationRequest={(newLocation) => {
+          console.log('Location requested from emergency:', newLocation);
+          setUserLocation(newLocation);
+          if (mapInstance) {
+            mapInstance.flyTo(newLocation, MAP_TRACKING_ZOOM, {
+              animate: true,
+              duration: 1.5
+            });
+          }
+        }}
       />
 
       {/* --- FORM MODAL --- */}

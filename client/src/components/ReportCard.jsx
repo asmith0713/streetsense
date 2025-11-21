@@ -4,42 +4,43 @@ import { resolveImageUrl } from '../utils/imageHelper';
 
 export default function ReportCard({ report, onUpdated }) {
   const [upvotes, setUpvotes] = useState(report.upvotes || 0);
-  const [status, setStatus] = useState(report.status || 'open');
+  const [downvotes, setDownvotes] = useState(report.downvotes || 0);
+  const status = report.status || 'open';
   const [imageError, setImageError] = useState(false);
-  const [upvoting, setUpvoting] = useState(false);
-  const [changingStatus, setChangingStatus] = useState(false);
-
-  
+  const [voting, setVoting] = useState(false);
+  const [userVote, setUserVote] = useState(null); // 'up', 'down', or null
 
   const imageSrc = resolveImageUrl(report.photoUrl);
 
-  async function handleUpvote() {
-    if (upvoting) return; // Prevent double-click
-    setUpvoting(true);
-    try {
-      const res = await API.post(`/reports/${report._id}/upvote`);
-      setUpvotes(res.data.upvotes);
-      if (onUpdated) onUpdated();
-    } catch (err) {
-      console.error('Upvote failed', err);
-      alert('Failed to upvote');
-    } finally {
-      setUpvoting(false);
+  async function handleVote(voteType) {
+    if (voting) return; // Prevent double-click
+    
+    // Validate report ID
+    if (!report._id || report._id === 'undefined') {
+      console.error('Invalid report ID:', report._id);
+      alert('Cannot vote: Invalid report ID');
+      return;
     }
-  }
+    
+    // If user clicks same vote, remove their vote
+    if (userVote === voteType) {
+      return; // Already voted this way
+    }
 
-  async function changeStatus(newStatus) {
-    if (changingStatus) return; // Prevent double-click
-    setChangingStatus(true);
+    setVoting(true);
     try {
-      await API.put(`/reports/${report._id}/status`, { status: newStatus });
-      setStatus(newStatus);
+      const endpoint = voteType === 'up' ? 'upvote' : 'downvote';
+      const res = await API.post(`/reports/${report._id}/${endpoint}`);
+      setUpvotes(res.data.upvotes || 0);
+      setDownvotes(res.data.downvotes || 0);
+      setUserVote(voteType);
       if (onUpdated) onUpdated();
     } catch (err) {
-      console.error('Status update failed', err);
-      alert('Failed to change status');
+      console.error(`${voteType}vote failed`, err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Network error';
+      alert(`Failed to ${voteType}vote: ${errorMsg}`);
     } finally {
-      setChangingStatus(false);
+      setVoting(false);
     }
   }
 
@@ -51,6 +52,8 @@ export default function ReportCard({ report, onUpdated }) {
     };
     return <span className={`badge bg-${statusColors[status] || 'secondary'} text-uppercase`}>{status}</span>;
   };
+
+  const netVotes = upvotes - downvotes;
 
   return (
     <div style={{ minWidth: 220, maxWidth: 300 }}>
@@ -95,32 +98,36 @@ export default function ReportCard({ report, onUpdated }) {
         </div>
       ) : null}
 
-      <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-        <button
-          onClick={handleUpvote}
-          className="btn btn-sm btn-outline-primary"
-          disabled={upvoting}
-          style={{ flex: '1 1 auto' }}
-        >
-          <i className="bi bi-hand-thumbs-up me-1"></i>
-          {upvoting ? '...' : upvotes}
-        </button>
-        <button
-          onClick={() => changeStatus('verified')}
-          className="btn btn-sm btn-outline-info"
-          disabled={changingStatus}
-          style={{ flex: '1 1 auto' }}
-        >
-          Verify
-        </button>
-        <button
-          onClick={() => changeStatus('resolved')}
-          className="btn btn-sm btn-outline-success"
-          disabled={changingStatus}
-          style={{ flex: '1 1 auto' }}
-        >
-          Resolve
-        </button>
+      <div className="d-flex align-items-center gap-2 mt-3">
+        <div className="btn-group" role="group">
+          <button
+            onClick={() => handleVote('up')}
+            className={`btn btn-sm ${userVote === 'up' ? 'btn-primary' : 'btn-outline-primary'}`}
+            disabled={voting}
+            title="Upvote this report"
+          >
+            <i className="bi bi-hand-thumbs-up-fill"></i>
+          </button>
+          <button
+            className="btn btn-sm btn-outline-secondary disabled"
+            style={{ minWidth: '50px', fontWeight: 'bold' }}
+          >
+            {netVotes}
+          </button>
+          <button
+            onClick={() => handleVote('down')}
+            className={`btn btn-sm ${userVote === 'down' ? 'btn-danger' : 'btn-outline-danger'}`}
+            disabled={voting}
+            title="Downvote this report"
+          >
+            <i className="bi bi-hand-thumbs-down-fill"></i>
+          </button>
+        </div>
+      </div>
+
+      <div className="small text-muted mt-2">
+        <i className="bi bi-clock me-1"></i>
+        {new Date(report.timestamp).toLocaleDateString()}
       </div>
     </div>
   );

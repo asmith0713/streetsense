@@ -7,16 +7,17 @@ const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      // Allow request to proceed without user info
+      // No token provided - set user to null but continue
       req.user = null;
       return next();
     }
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded; // decoded contains { id, iat, exp }
     next();
   } catch (err) {
-    // Invalid token, but allow request to proceed
+    // Invalid or expired token
+    console.error('Auth middleware error:', err.message);
     req.user = null;
     next();
   }

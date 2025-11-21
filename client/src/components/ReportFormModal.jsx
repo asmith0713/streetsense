@@ -43,8 +43,8 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
           if(e.target === e.currentTarget) onClose();
         }}
       >
-        <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable" style={{ margin: '1rem' }}>
-          <div className="modal-content" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
+        <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+          <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">New Report</h5>
               <button type="button" className="btn-close" onClick={onClose}></button>

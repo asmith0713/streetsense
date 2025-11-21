@@ -1,18 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Alert } from 'react-bootstrap';
 import API from '../api';
 
-export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
+export default function EmergencyButton({ userLocation, onEmergencyCreated, onLocationRequest }) {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emergencyContacts, setEmergencyContacts] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(userLocation);
+
+  // Update location when prop changes
+  useEffect(() => {
+    setCurrentLocation(userLocation);
+  }, [userLocation]);
 
   const handleShow = () => {
     setShow(true);
     setError(null);
     setSuccess(false);
+    
+    // Auto-request location if not available
+    if (!userLocation && !fetchingLocation) {
+      requestLocation();
+    }
+  };
+
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported by your browser');
+      return;
+    }
+
+    setFetchingLocation(true);
+    setError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const newLocation = [latitude, longitude];
+        setCurrentLocation(newLocation);
+        setFetchingLocation(false);
+        
+        // Notify parent component to update location
+        if (onLocationRequest) {
+          onLocationRequest(newLocation);
+        }
+      },
+      (err) => {
+        console.error('Location error:', err);
+        let errorMsg = 'Failed to get location. ';
+        switch (err.code) {
+          case 1:
+            errorMsg += 'Please allow location access in your browser settings.';
+            break;
+          case 2:
+            errorMsg += 'Location unavailable. Check your GPS.';
+            break;
+          case 3:
+            errorMsg += 'Location request timed out.';
+            break;
+          default:
+            errorMsg += 'Unknown error.';
+        }
+        setError(errorMsg);
+        setFetchingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000
+      }
+    );
   };
 
   const handleClose = () => {
@@ -22,8 +82,11 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
   };
 
   const createEmergency = async (type, severity = 'high') => {
-    if (!userLocation) {
-      setError('Location required. Please enable location services.');
+    const locationToUse = currentLocation || userLocation;
+    
+    if (!locationToUse) {
+      setError('Fetching location... Please wait and try again.');
+      requestLocation();
       return;
     }
 
@@ -31,7 +94,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
     setError(null);
 
     try {
-      const [lat, lng] = userLocation;
+      const [lat, lng] = locationToUse;
       
       const response = await API.post('/emergency', {
         type,
@@ -100,6 +163,17 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
         <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
           
+          {fetchingLocation && (
+            <Alert variant="info">
+              <div className="d-flex align-items-center">
+                <div className="spinner-border spinner-border-sm me-2" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <span>Requesting location access...</span>
+              </div>
+            </Alert>
+          )}
+          
           {success && emergencyContacts ? (
             <div>
               <Alert variant="success">
@@ -146,6 +220,20 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
             </div>
           ) : (
             <div>
+              {!currentLocation && !userLocation && !fetchingLocation && (
+                <Alert variant="info" className="mb-3">
+                  <i className="bi bi-info-circle me-2"></i>
+                  We'll request your location when you select an emergency type.
+                </Alert>
+              )}
+              
+              {(currentLocation || userLocation) && (
+                <Alert variant="success" className="mb-3">
+                  <i className="bi bi-check-circle me-2"></i>
+                  Location acquired. Ready to send emergency alert.
+                </Alert>
+              )}
+              
               <Alert variant="warning">
                 <strong>⚠️ Use only in genuine emergencies</strong>
                 <br />
@@ -157,7 +245,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
                 <Button
                   variant="danger"
                   onClick={() => createEmergency('harassment', 'critical')}
-                  disabled={loading}
+                  disabled={loading || fetchingLocation}
                   size="lg"
                 >
                   <i className="bi bi-exclamation-triangle-fill me-2"></i>
@@ -167,7 +255,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
                 <Button
                   variant="danger"
                   onClick={() => createEmergency('assault', 'critical')}
-                  disabled={loading}
+                  disabled={loading || fetchingLocation}
                   size="lg"
                 >
                   <i className="bi bi-shield-exclamation me-2"></i>
@@ -177,7 +265,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
                 <Button
                   variant="danger"
                   onClick={() => createEmergency('stalking', 'high')}
-                  disabled={loading}
+                  disabled={loading || fetchingLocation}
                   size="lg"
                 >
                   <i className="bi bi-eye-fill me-2"></i>
@@ -187,7 +275,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
                 <Button
                   variant="warning"
                   onClick={() => createEmergency('medical', 'high')}
-                  disabled={loading}
+                  disabled={loading || fetchingLocation}
                 >
                   <i className="bi bi-heart-pulse-fill me-2"></i>
                   Medical Emergency
@@ -196,19 +284,19 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated }) {
                 <Button
                   variant="secondary"
                   onClick={() => createEmergency('general', 'medium')}
-                  disabled={loading}
+                  disabled={loading || fetchingLocation}
                 >
                   <i className="bi bi-exclamation-circle-fill me-2"></i>
                   Other Emergency
                 </Button>
               </div>
 
-              {loading && (
+              {(loading || fetchingLocation) && (
                 <div className="text-center mt-3">
                   <div className="spinner-border text-danger" role="status">
-                    <span className="visually-hidden">Creating alert...</span>
+                    <span className="visually-hidden">{fetchingLocation ? 'Getting location...' : 'Creating alert...'}</span>
                   </div>
-                  <p className="mt-2 text-muted">Creating emergency alert...</p>
+                  <p className="mt-2 text-muted">{fetchingLocation ? 'Getting your location...' : 'Creating emergency alert...'}</p>
                 </div>
               )}
 

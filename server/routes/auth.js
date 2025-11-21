@@ -181,4 +181,153 @@ router.post('/google', async (req, res) => {
   }
 });
 
+// GET /api/auth/me - Get current user info
+router.get('/me', async (req, res) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      console.log('GET /auth/me - No token provided');
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (jwtErr) {
+      console.error('GET /auth/me - JWT verification failed:', jwtErr.message);
+      return res.status(401).json({ message: 'Invalid or expired token' });
+    }
+
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      console.log('GET /auth/me - User not found for ID:', decoded.id);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log('GET /auth/me - Success for user:', user.email);
+    
+    res.json({ 
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name || '',
+        phone: user.phone || '',
+        address: user.address || '',
+        bloodType: user.bloodType || '',
+        allergies: user.allergies || '',
+        medicalConditions: user.medicalConditions || '',
+        emergencyContacts: user.emergencyContacts || [],
+        picture: user.picture,
+        authProvider: user.authProvider
+      }
+    });
+  } catch (err) {
+    console.error('GET /auth/me - Server error:', err);
+    res.status(500).json({ message: 'Server error while fetching user data' });
+  }
+});
+
+// PUT /api/auth/emergency-contacts - Update emergency contacts
+router.put('/emergency-contacts', async (req, res) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { contacts } = req.body;
+
+    if (!Array.isArray(contacts)) {
+      return res.status(400).json({ message: 'Contacts must be an array' });
+    }
+
+    // Validate contacts
+    for (const contact of contacts) {
+      if (!contact.name || !contact.phone) {
+        return res.status(400).json({ message: 'Each contact must have name and phone' });
+      }
+      if (contact.phone.length < 10) {
+        return res.status(400).json({ message: 'Phone number must be at least 10 digits' });
+      }
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.emergencyContacts = contacts;
+    await user.save();
+
+    res.json({
+      message: 'Emergency contacts updated successfully',
+      contacts: user.emergencyContacts
+    });
+
+  } catch (err) {
+    console.error('Update emergency contacts error:', err);
+    res.status(500).json({ message: 'Failed to update emergency contacts' });
+  }
+});
+
+// PUT /api/auth/profile - Update user profile (medical info, address, etc.)
+router.put('/profile', async (req, res) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ message: 'No authentication token' });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { name, phone, address, bloodType, allergies, medicalConditions, emergencyContacts } = req.body;
+    
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update fields if provided
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (address !== undefined) user.address = address;
+    if (bloodType !== undefined) user.bloodType = bloodType;
+    if (allergies !== undefined) user.allergies = allergies;
+    if (medicalConditions !== undefined) user.medicalConditions = medicalConditions;
+    
+    // Update emergency contacts if provided
+    if (Array.isArray(emergencyContacts)) {
+      for (const contact of emergencyContacts) {
+        if (!contact.name || !contact.phone) {
+          return res.status(400).json({ message: 'Each contact must have name and phone' });
+        }
+      }
+      user.emergencyContacts = emergencyContacts;
+    }
+
+    await user.save();
+
+    res.json({ 
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        address: user.address,
+        bloodType: user.bloodType,
+        allergies: user.allergies,
+        medicalConditions: user.medicalConditions,
+        emergencyContacts: user.emergencyContacts
+      }
+    });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ message: 'Failed to update profile' });
+  }
+});
+
 module.exports = router;
