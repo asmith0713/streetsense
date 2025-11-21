@@ -46,12 +46,43 @@ function computeTimeOfDay(date = new Date()) {
   return (h >= 18 || h < 6) ? 'night' : 'day';
 }
 
+// GET /api/reports/admin/all - ADMIN ONLY - Get ALL reports including deleted
+// MUST be before GET / route
+router.get('/admin/all', async (req, res) => {
+  try {
+    // Check admin password
+    const adminPassword = req.headers['x-admin-password'];
+    if (!adminPassword || adminPassword !== process.env.ADMIN_PASSWORD) {
+      return res.status(401).json({ error: 'Admin access required' });
+    }
+
+    const { bbox, categories, since, limit = 2000 } = req.query;
+    const filter = {}; // No status filter - include ALL reports
+    
+    if (categories) filter.category = { $in: categories.split(',') };
+    if (since) filter.timestamp = { $gte: new Date(since) };
+    if (bbox) {
+      const [lng1, lat1, lng2, lat2] = bbox.split(',').map(Number);
+      filter.location = { $geoWithin: { $box: [[lng1, lat1], [lng2, lat2]] } };
+    }
+    const reports = await Report.find(filter).limit(Math.min(parseInt(limit, 10), 5000)).sort({ timestamp: -1 }).lean();
+    const features = reports.map(r => ({
+      type: 'Feature',
+      geometry: r.location,
+      properties: r
+    }));
+    res.json({ type: 'FeatureCollection', features });
+  } catch (err) {
+    console.error('GET /api/reports/admin/all', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // GET /api/reports
-// optional query: bbox=lng1,lat1,lng2,lat2  categories=cat1,cat2  since=ISODate limit=100
 router.get('/', async (req, res) => {
   try {
     const { bbox, categories, since, limit = 100 } = req.query;
-    const filter = {};
+    const filter = { status: { $ne: 'deleted' } }; // Exclude deleted reports
     
     if (categories) filter.category = { $in: categories.split(',') };
     if (since) filter.timestamp = { $gte: new Date(since) };
@@ -183,7 +214,7 @@ router.post('/:id/downvote', mutationLimiter, authMiddleware, async (req, res) =
   }
 });
 
-// DELETE /api/reports/:id - ADMIN ONLY
+// DELETE /api/reports/:id - ADMIN ONLY (Soft Delete)
 router.delete('/:id', mutationLimiter, async (req, res) => {
   try {
     // Check admin password
@@ -199,29 +230,23 @@ router.delete('/:id', mutationLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Invalid report ID format' });
     }
 
-    const deletedReport = await Report.findByIdAndDelete(id);
+    // Soft delete: Update status to 'deleted' instead of removing from database
+    const deletedReport = await Report.findByIdAndUpdate(
+      id,
+      { 
+        status: 'deleted',
+        deletedAt: new Date()
+      },
+      { new: true }
+    );
     
     if (!deletedReport) {
       return res.status(404).json({ error: 'Report not found' });
     }
 
-    // Optionally delete the associated photo file
-    if (deletedReport.photoUrl && deletedReport.photoUrl.startsWith('uploads/')) {
-      const photoPath = path.join(__dirname, '..', deletedReport.photoUrl);
-      try {
-        if (fs.existsSync(photoPath)) {
-          fs.unlinkSync(photoPath);
-          console.log('Deleted photo file:', photoPath);
-        }
-      } catch (err) {
-        console.error('Failed to delete photo file:', err);
-        // Continue anyway - report deleted from DB
-      }
-    }
-
     res.json({ 
       success: true, 
-      message: 'Report deleted successfully',
+      message: 'Report removed from map (archived)',
       deletedId: id 
     });
   } catch (err) {

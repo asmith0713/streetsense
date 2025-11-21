@@ -12,7 +12,8 @@ const ReportSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now },
   timeOfDay: { type: String, enum: ['day','night'], default: 'day' },
   photoUrl: String,
-  status: { type: String, enum: ['open','verified','resolved'], default: 'open' },
+  status: { type: String, enum: ['open','verified','resolved','deleted'], default: 'open' }, // Added 'deleted'
+  deletedAt: { type: Date }, // New field to track when it was deleted
   upvotes: { type: Number, default: 0 },
   downvotes: { type: Number, default: 0 }
 }, { timestamps: true });

@@ -50,7 +50,9 @@ const corsOptions = {
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'],
   credentials: true,
   optionsSuccessStatus: 200,
-  maxAge: 86400
+  maxAge: 86400,
+  exposedHeaders: ['x-admin-password'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-password']
 };
 app.use(cors(corsOptions));
 
