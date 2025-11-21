@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, ZoomControl, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import API from '../api'; // Ensure this path is correct
@@ -37,6 +37,14 @@ const userLocationIcon = new L.Icon({
   iconSize: [24, 24],
   iconAnchor: [12, 12],
   popupAnchor: [0, -12]
+});
+
+// Custom shared location icon (Orange/Red Pin Marker)
+const sharedLocationIcon = new L.Icon({
+  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCAzMiA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTYgNDhDMTYgNDggMzIgMjguOCAzMiAxNkMzMiA3LjE2MzQ0IDI0LjgzNjYgMCAxNiAwQzcuMTYzNDQgMCAwIDcuMTYzNDQgMCAxNkMwIDI4LjggMTYgNDggMTYgNDhaIiBmaWxsPSIjRkY1NzIyIi8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iOCIgZmlsbD0id2hpdGUiLz4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI1IiBmaWxsPSIjRkY1NzIyIi8+Cjwvc3ZnPg==',
+  iconSize: [32, 48],
+  iconAnchor: [16, 48],
+  popupAnchor: [0, -48]
 });
 
 // --- Helper Components ---
@@ -101,6 +109,7 @@ export default function MapPage() {
   // Location State
   const [pos, setPos] = useState([17.447, 78.396]); // Default center
   const [userLocation, setUserLocation] = useState(null);
+  const [sharedLocation, setSharedLocation] = useState(null); // Location from tracking link
   const [trackingLocation, setTrackingLocation] = useState(
     localStorage.getItem('streetsense_tracking') === 'true'
   );
@@ -114,11 +123,13 @@ export default function MapPage() {
   const [mode, setMode] = useState('pins'); // 'pins' | 'heat' | 'cluster'
   const [mapInstance, setMapInstance] = useState(null);
   const [showShareToast, setShowShareToast] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   
   // Refs
   const [autoRefresh] = useState(true); // Default to true for live apps
   const refreshTimerRef = useRef(null);
   const watchIdRef = useRef(null);
+  const shareMenuRef = useRef(null);
 
   // Helper: Get timestamp for API
   const getTimeDate = (filter) => {
@@ -149,7 +160,7 @@ export default function MapPage() {
       // Process GeoJSON [Lng, Lat] -> Leaflet [Lat, Lng]
       setReports(features.map(f => ({
         ...f.properties,
-        _id: f._id || f.id, // Handle different ID formats
+        _id: f._id || f.properties?._id || f.id, // Handle different ID formats (GeoJSON structure)
         // Ensure we handle GeoJSON [lng, lat] correctly
         coords: f.geometry?.coordinates ? f.geometry.coordinates : [78.396, 17.447]
       })));
@@ -204,7 +215,7 @@ export default function MapPage() {
     };
   }, [fetchData, autoRefresh]);
 
-  // 2b. Effect: Handle shared location from URL parameters
+  // 2b. Effect: Handle shared location from URL parameters (TRACKING LINK FEATURE)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const lat = parseFloat(params.get('lat'));
@@ -214,6 +225,7 @@ export default function MapPage() {
     if (!isNaN(lat) && !isNaN(lng)) {
       const sharedLocation = [lat, lng];
       setPos(sharedLocation);
+      setSharedLocation(sharedLocation); // Store shared location for marker
       
       if (mapInstance) {
         setTimeout(() => {
@@ -224,7 +236,7 @@ export default function MapPage() {
         }, 500);
       }
     }
-  }, [mapInstance]);
+  }, [mapInstance]); // Effect runs when map loads, enabling tracking links to work
 
   // 2c. Effect: Fetch crowd data when crowd heatmap is enabled
   useEffect(() => {
@@ -306,6 +318,20 @@ export default function MapPage() {
       if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     };
   }, []);
+
+  // 3b. Effect: Close share menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target)) {
+        setShowShareMenu(false);
+      }
+    };
+
+    if (showShareMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showShareMenu]);
 
   // Location Logic
   const getLocationErrorMessage = (code) => {
@@ -441,41 +467,93 @@ export default function MapPage() {
   };
 
   // Share Location
+  const copyToClipboard = async (shareUrl) => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShowShareToast(true);
+      setShowShareMenu(false);
+      setTimeout(() => setShowShareToast(false), 3000);
+      return true;
+    } catch (err) {
+      console.error('Clipboard write failed:', err);
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        if (successful) {
+          setShowShareToast(true);
+          setShowShareMenu(false);
+          setTimeout(() => setShowShareToast(false), 3000);
+          return true;
+        }
+        return false;
+      } catch (err2) {
+        console.error('Fallback clipboard failed:', err2);
+        return false;
+      }
+    }
+  };
+
+  const shareViaWhatsApp = (shareUrl, lat, lng) => {
+    const message = `📍 Check out my location on StreetSense!\n\nCoordinates: ${lat.toFixed(6)}, ${lng.toFixed(6)}\n\n${shareUrl}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    setShowShareMenu(false);
+  };
+
+  const shareViaSMS = (shareUrl, lat, lng) => {
+    const message = `Check out my location on StreetSense: ${lat.toFixed(6)}, ${lng.toFixed(6)} - ${shareUrl}`;
+    // Use different format for better compatibility across iOS and Android
+    const smsUrl = `sms:?&body=${encodeURIComponent(message)}`;
+    window.location.href = smsUrl;
+    setShowShareMenu(false);
+  };
+
   const shareLocation = async () => {
     if (!userLocation) {
       alert('Please enable location first by clicking "Find Me" or "Live Tracking"');
       return;
     }
 
-    const [lat, lng] = userLocation;
-    const shareUrl = `${window.location.origin}/map?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&zoom=${MAP_TRACKING_ZOOM}`;
-    
-    try {
-      // Try to use native share API if available (mobile)
-      if (navigator.share) {
+    // Try native share API first on mobile devices
+    if (navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      const [lat, lng] = userLocation;
+      const shareUrl = `${window.location.origin}/map?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&zoom=${MAP_TRACKING_ZOOM}`;
+      
+      try {
         await navigator.share({
           title: 'My Location on StreetSense',
           text: `Check out my location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
           url: shareUrl
         });
-      } else {
-        // Fallback: copy to clipboard
-        await navigator.clipboard.writeText(shareUrl);
-        setShowShareToast(true);
-        setTimeout(() => setShowShareToast(false), 3000);
-      }
-    } catch (err) {
-      console.error('Share failed:', err);
-      // Fallback if clipboard fails
-      try {
-        await navigator.clipboard.writeText(shareUrl);
-        setShowShareToast(true);
-        setTimeout(() => setShowShareToast(false), 3000);
-      } catch {
-        alert(`Share link: ${shareUrl}`);
+        return;
+      } catch (err) {
+        // User cancelled or share failed, show menu as fallback
+        if (err.name !== 'AbortError') {
+          console.error('Native share failed:', err);
+        }
       }
     }
+    
+    // Show share menu for desktop or if native share failed
+    setShowShareMenu(!showShareMenu);
   };
+
+  // Memoize the share URL to avoid recalculation
+  const shareUrl = useMemo(() => {
+    if (!userLocation) return null;
+    const [lat, lng] = userLocation;
+    return `${window.location.origin}/map?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&zoom=${MAP_TRACKING_ZOOM}`;
+  }, [userLocation]);
 
   // Form Handlers
   const handleMapClick = (latlng) => {
@@ -666,14 +744,63 @@ export default function MapPage() {
 
           {/* Share Location Link */}
           {userLocation && (
-            <button
-              className="btn btn-light rounded-circle shadow d-flex align-items-center justify-content-center border-0"
-              style={{width: '48px', height: '48px'}}
-              onClick={shareLocation}
-              title="Share location link - copy URL to share with others"
-            >
-              <i className="bi bi-share fs-5 text-dark"></i>
-            </button>
+            <div className="position-relative" ref={shareMenuRef}>
+              <button
+                className="btn btn-light rounded-circle shadow d-flex align-items-center justify-content-center border-0"
+                style={{width: '48px', height: '48px'}}
+                onClick={shareLocation}
+                title="Share location link - copy URL to share with others"
+              >
+                <i className="bi bi-share fs-5 text-dark"></i>
+              </button>
+
+              {/* Share Menu Dropdown */}
+              {showShareMenu && shareUrl && (
+                <div 
+                  className="position-absolute start-100 bottom-0 ms-2 bg-white rounded-3 shadow-lg border"
+                  style={{
+                    minWidth: '220px',
+                    zIndex: 1050
+                  }}
+                >
+                  <div className="p-2">
+                    <div className="text-muted small fw-semibold px-2 py-1 mb-1">
+                      Share Location
+                    </div>
+                    
+                    <button
+                      className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2 mb-1"
+                      onClick={() => copyToClipboard(shareUrl)}
+                    >
+                      <i className="bi bi-clipboard text-primary"></i>
+                      <span>Copy Link</span>
+                    </button>
+
+                    <button
+                      className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2 mb-1"
+                      onClick={() => {
+                        const [lat, lng] = userLocation;
+                        shareViaWhatsApp(shareUrl, lat, lng);
+                      }}
+                    >
+                      <i className="bi bi-whatsapp text-success"></i>
+                      <span>Share via WhatsApp</span>
+                    </button>
+
+                    <button
+                      className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2"
+                      onClick={() => {
+                        const [lat, lng] = userLocation;
+                        shareViaSMS(shareUrl, lat, lng);
+                      }}
+                    >
+                      <i className="bi bi-chat-text text-info"></i>
+                      <span>Share via SMS</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -724,6 +851,24 @@ export default function MapPage() {
         />
         
         <ZoomControl position="bottomright" />
+
+        {/* Shared Location Marker (from tracking link) */}
+        {sharedLocation && (
+          <Marker position={sharedLocation} icon={sharedLocationIcon} zIndexOffset={999}>
+            <Popup autoPan={false}>
+              <div>
+                <strong className="text-primary">📍 Shared Location</strong>
+                <p className="mb-1 mt-2 small text-muted">
+                  Someone shared this location with you
+                </p>
+                <div className="small">
+                  <strong>Coordinates:</strong><br />
+                  {sharedLocation[0].toFixed(6)}, {sharedLocation[1].toFixed(6)}
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        )}
 
         {/* User Location Marker */}
         {userLocation && (

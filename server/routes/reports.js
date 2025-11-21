@@ -53,12 +53,6 @@ router.get('/', async (req, res) => {
     const { bbox, categories, since, limit = 100 } = req.query;
     const filter = {};
     
-    // Hide resolved reports from map view for end users (admin can see all)
-    const isAdmin = req.headers['x-admin-password'] === process.env.ADMIN_PASSWORD;
-    if (!isAdmin) {
-      filter.status = { $ne: 'resolved' }; // Exclude resolved reports
-    }
-    
     if (categories) filter.category = { $in: categories.split(',') };
     if (since) filter.timestamp = { $gte: new Date(since) };
     if (bbox) {
@@ -189,6 +183,53 @@ router.post('/:id/downvote', mutationLimiter, authMiddleware, async (req, res) =
   }
 });
 
+// DELETE /api/reports/:id - ADMIN ONLY
+router.delete('/:id', mutationLimiter, async (req, res) => {
+  try {
+    // Check admin password
+    const adminPassword = req.headers['x-admin-password'];
+    if (!adminPassword || adminPassword !== process.env.ADMIN_PASSWORD) {
+      return res.status(401).json({ error: 'Admin access required' });
+    }
+
+    const { id } = req.params;
+    
+    // Validate ObjectId format
+    if (!id || id === 'undefined' || !/^[0-9a-fA-F]{24}$/.test(id)) {
+      return res.status(400).json({ error: 'Invalid report ID format' });
+    }
+
+    const deletedReport = await Report.findByIdAndDelete(id);
+    
+    if (!deletedReport) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    // Optionally delete the associated photo file
+    if (deletedReport.photoUrl && deletedReport.photoUrl.startsWith('uploads/')) {
+      const photoPath = path.join(__dirname, '..', deletedReport.photoUrl);
+      try {
+        if (fs.existsSync(photoPath)) {
+          fs.unlinkSync(photoPath);
+          console.log('Deleted photo file:', photoPath);
+        }
+      } catch (err) {
+        console.error('Failed to delete photo file:', err);
+        // Continue anyway - report deleted from DB
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Report deleted successfully',
+      deletedId: id 
+    });
+  } catch (err) {
+    console.error('DELETE report error:', err);
+    res.status(500).json({ message: 'Failed to delete report' });
+  }
+});
+
 // PUT /api/reports/:id/status  body: { status } - ADMIN ONLY
 router.put('/:id/status', mutationLimiter, async (req, res) => {
   try {
@@ -199,7 +240,7 @@ router.put('/:id/status', mutationLimiter, async (req, res) => {
     }
 
     const { status } = req.body;
-    if (!['open','verified','resolved'].includes(status)) return res.status(400).json({ error: 'invalid status' });
+    if (!['open','verified'].includes(status)) return res.status(400).json({ error: 'invalid status' });
     const rep = await Report.findByIdAndUpdate(req.params.id, { status }, { new: true });
     if (!rep) return res.status(404).json({ error: 'not found' });
     res.json({ success: true, report: rep });

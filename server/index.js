@@ -6,14 +6,24 @@ const dotenv = require('dotenv');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const fs = require('fs'); // Added to check if folders exist
 
 dotenv.config();
+
+// 1. Validate Env Vars EARLY (Fail fast)
+const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET', 'ADMIN_PASSWORD'];
+const missing = REQUIRED_ENV.filter(key => !process.env[key]);
+if (missing.length > 0) {
+  console.error(`[Fatal] Missing required environment variables: ${missing.join(', ')}`);
+  process.exit(1);
+}
+
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Trust proxy for rate limiter behind Nginx/Docker
-app.set('trust proxy', 1);
+// 2. Security & Middleware
+app.set('trust proxy', 1); // Trust proxy for rate limiter behind Nginx/Docker
 
-// Production security headers
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: {
@@ -36,30 +46,28 @@ app.use(helmet({
   }
 }));
 
-// CORS configuration
 const corsOptions = {
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'],
   credentials: true,
   optionsSuccessStatus: 200,
-  maxAge: 86400 // Cache preflight for 24 hours
+  maxAge: 86400
 };
 app.use(cors(corsOptions));
 
-// Body parsing with size limits
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// static uploads folder & data folder (with caching)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  maxAge: '1d',
-  etag: true
-}));
-app.use('/data', express.static(path.join(__dirname, 'data'), {
-  maxAge: '1h',
-  etag: true
-}));
+// 3. Static Files (Ensure directories exist to prevent crashes)
+const uploadsDir = path.join(__dirname, 'uploads');
+const dataDir = path.join(__dirname, 'data');
 
-// Enhanced rate limiting
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+app.use('/uploads', express.static(uploadsDir, { maxAge: '1d', etag: true }));
+app.use('/data', express.static(dataDir, { maxAge: '1h', etag: true }));
+
+// 4. Rate Limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
@@ -69,20 +77,22 @@ const apiLimiter = rateLimit({
 });
 app.use('/api/', apiLimiter);
 
-// Routes
+// 5. Routes
+// Import routes (Ensure these files exist)
 const reportsRouter = require('./routes/reports');
 const heatRouter = require('./routes/heat');
 const authRouter = require('./routes/auth');
 const locationsRouter = require('./routes/locations');
 const emergencyRouter = require('./routes/emergency');
 
-app.use('/api/reports/heat', heatRouter);
+// Order matters: Specific routes before general routes
+app.use('/api/reports/heat', heatRouter); 
 app.use('/api/reports', reportsRouter);
 app.use('/api/auth', authRouter);
-app.use('/api/locations', locationsRouter); // User locations for safety heatmap
-app.use('/api/emergency', emergencyRouter); // Emergency alerts and contacts
+app.use('/api/locations', locationsRouter);
+app.use('/api/emergency', emergencyRouter);
 
-// basic health
+// Health Check
 app.get('/health', async (req, res) => {
   const health = {
     uptime: process.uptime(),
@@ -91,9 +101,9 @@ app.get('/health', async (req, res) => {
   };
   
   try {
-    // Check MongoDB connection
     if (mongoose.connection.readyState === 1) {
-      await mongoose.connection.db.admin().ping();
+      // Lightweight check
+      await mongoose.connection.db.command({ ping: 1 });
       health.mongodb = 'connected';
     }
     res.json({ ok: true, ...health });
@@ -103,106 +113,87 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// 6. Error Handling (Must be after routes)
 
-// Validate required environment variables
-const REQUIRED_ENV = ['MONGO_URI', 'JWT_SECRET', 'ADMIN_PASSWORD'];
-const missing = REQUIRED_ENV.filter(key => !process.env[key]);
-if (missing.length > 0) {
-  console.error(`Missing required environment variables: ${missing.join(', ')}`);
-  process.exit(1);
-}
+// 404 Handler
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'Route not found' });
+});
 
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  const status = err.status || 500;
+  const message = err.message || 'Internal Server Error';
+  res.status(status).json({ 
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }) 
+  });
+});
 
-
-const PORT = process.env.PORT || 5000;
-
-// MongoDB connection configuration with production-grade settings
+// 7. Database & Server Startup
+// Updated Mongoose Options for v6+ (removed deprecated options)
 const mongooseOptions = {
-  serverSelectionTimeoutMS: 30000, // Increased from 5s to 30s
-  socketTimeoutMS: 45000, // 45 seconds for socket operations
-  connectTimeoutMS: 30000, // 30 seconds for initial connection
-  maxPoolSize: 10, // Connection pool size
-  minPoolSize: 2, // Minimum connections
-  maxIdleTimeMS: 30000, // Close idle connections after 30s
-  retryWrites: true, // Retry failed writes
-  retryReads: true, // Retry failed reads
-  heartbeatFrequencyMS: 10000, // Check connection health every 10s
-  // serverSelectionRetryFrequency: 5000, // Retry server selection every 5s
+  serverSelectionTimeoutMS: 5000, // Fail fast if DB is down (5s)
+  maxPoolSize: 10,
+  minPoolSize: 2,
+  maxIdleTimeMS: 30000,
+  socketTimeoutMS: 45000, 
+  // retryWrites and automatic reconnection are default in Mongoose 6+
 };
+
+let server;
 
 async function connectToMongoDB() {
   try {
     await mongoose.connect(process.env.MONGO_URI, mongooseOptions);
     console.log('MongoDB connected successfully');
-    return true;
   } catch (err) {
     console.error('MongoDB connection error:', err.message);
-    return false;
+    console.log('Retrying MongoDB connection in 5 seconds...');
+    setTimeout(connectToMongoDB, 5000);
   }
 }
 
-async function start() {
+// MongoDB Event Listeners (Define only once)
+mongoose.connection.on('disconnected', () => console.warn('MongoDB disconnected'));
+mongoose.connection.on('reconnected', () => console.log('MongoDB reconnected'));
+mongoose.connection.on('error', (err) => console.error('MongoDB connection error:', err));
+
+// Graceful Shutdown Function
+const gracefulShutdown = async (signal) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  
+  if (server) {
+    server.close(() => {
+      console.log('HTTP Server closed.');
+    });
+  }
+
   try {
-    // Connect to MongoDB with retry logic
-    const connected = await connectToMongoDB();
-    
-    if (!connected) {
-      console.error('Failed to connect to MongoDB. Retrying in 5 seconds...');
-      setTimeout(start, 5000);
-      return;
-    }
-    
-    // Handle MongoDB connection events
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB error:', err.message);
-    });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.warn('MongoDB disconnected. Will auto-reconnect...');
-    });
-    
-    mongoose.connection.on('reconnected', () => {
-      console.log('MongoDB reconnected successfully');
-    });
-    
-    mongoose.connection.on('close', () => {
-      console.warn('MongoDB connection closed');
-    });
-    
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-      console.log('\nShutting down gracefully...');
-      try {
-        await mongoose.connection.close();
-        console.log('MongoDB connection closed');
-        process.exit(0);
-      } catch (err) {
-        console.error('Error during shutdown:', err);
-        process.exit(1);
-      }
-    });
-    
-    process.on('SIGTERM', async () => {
-      console.log('SIGTERM received, shutting down...');
-      try {
-        await mongoose.connection.close();
-        process.exit(0);
-      } catch (err) {
-        console.error('Error during shutdown:', err);
-        process.exit(1);
-      }
-    });
-    
-    // Start Express server
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/health`);
-    });
-    
+    await mongoose.connection.close(false);
+    console.log('MongoDB connection closed.');
+    process.exit(0);
   } catch (err) {
-    console.error('Startup error:', err);
+    console.error('Error during shutdown:', err);
     process.exit(1);
   }
+};
+
+// Initialize
+async function start() {
+  // Connect to DB
+  await connectToMongoDB();
+  
+  // Start Server
+  server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+  });
+
+  // Handle Signals
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 }
 
 start();

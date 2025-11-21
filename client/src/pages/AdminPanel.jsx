@@ -92,11 +92,49 @@ export default function AdminPanel() {
     setConfirmPayload({ id: reportId, status: newStatus });
     setConfirmOpen(true);
   }
+  
+  function confirmDelete(reportId) {
+    setConfirmPayload({ id: reportId, action: 'delete' });
+    setConfirmOpen(true);
+  }
+  
+  function getStatusChangeMessage() {
+    if (!confirmPayload) return '';
+    
+    // Handle delete action
+    if (confirmPayload.action === 'delete') {
+      return 'This will PERMANENTLY DELETE this report and remove it from the database. The pin will be removed from the map. This action CANNOT be undone. Continue?';
+    }
+    
+    const status = confirmPayload.status;
+    
+    if (status === 'verified') {
+      return 'This will mark the report as VERIFIED. The pin will remain visible on the map with a verified badge. Continue?';
+    } else if (status === 'open') {
+      return 'This will mark the report as OPEN. The pin will remain visible on the map. Continue?';
+    }
+    return 'Are you sure you want to update this report\'s status?';
+  }
 
   async function performStatusChange() {
     if (!confirmPayload) return;
     const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
+    
     try {
+      // Handle delete action
+      if (confirmPayload.action === 'delete') {
+        const response = await API.delete(`/reports/${confirmPayload.id}`, {
+          headers: { 'x-admin-password': adminPassword }
+        });
+        console.log('Delete response:', response.data);
+        setConfirmOpen(false);
+        setConfirmPayload(null);
+        alert('Report deleted successfully!');
+        await loadReports();
+        return;
+      }
+      
+      // Handle status change
       await API.put(`/reports/${confirmPayload.id}/status`, { 
         status: confirmPayload.status 
       }, {
@@ -104,10 +142,11 @@ export default function AdminPanel() {
       });
       setConfirmOpen(false);
       setConfirmPayload(null);
-      loadReports();
+      await loadReports();
     } catch (err) { 
-      console.error('Status update error:', err);
-      alert('Failed to update status'); 
+      console.error('Operation error:', err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Operation failed';
+      alert(`Failed: ${errorMsg}`); 
     }
   }
 
@@ -171,12 +210,13 @@ export default function AdminPanel() {
 
   const getStatusBadge = (status) => {
     const map = { 
-      open: 'warning', 
-      verified: 'info', 
-      resolved: 'success' 
+      open: { color: 'warning', icon: 'circle', label: 'Open - Visible on Map' }, 
+      verified: { color: 'info', icon: 'check-circle', label: 'Verified - Visible on Map' }
     };
+    const info = map[status] || { color: 'secondary', icon: 'question-circle', label: status };
     return (
-      <span className={`badge bg-${map[status] || 'secondary'} text-uppercase`}>
+      <span className={`badge bg-${info.color} text-uppercase`} title={info.label}>
+        <i className={`bi bi-${info.icon} me-1`}></i>
         {status}
       </span>
     );
@@ -344,14 +384,26 @@ export default function AdminPanel() {
                       </small>
                     </div>
                     <div className="d-flex justify-content-end gap-2">
-                      <button className="btn btn-xs btn-outline-secondary" onClick={() => confirmStatusChange(r._id, 'open')}>
-                        Open
+                      <button 
+                        className="btn btn-xs btn-outline-secondary" 
+                        onClick={() => confirmStatusChange(r._id, 'open')}
+                        title="Mark as open - keeps pin visible on map"
+                      >
+                        <i className="bi bi-circle"></i> Open
                       </button>
-                      <button className="btn btn-xs btn-outline-info" onClick={() => confirmStatusChange(r._id, 'verified')}>
-                        Verify
+                      <button 
+                        className="btn btn-xs btn-outline-info" 
+                        onClick={() => confirmStatusChange(r._id, 'verified')}
+                        title="Mark as verified - keeps pin visible with verified badge"
+                      >
+                        <i className="bi bi-check-circle"></i> Verify
                       </button>
-                      <button className="btn btn-xs btn-success" onClick={() => confirmStatusChange(r._id, 'resolved')}>
-                        Resolve
+                      <button 
+                        className="btn btn-xs btn-danger" 
+                        onClick={() => confirmDelete(r._id)}
+                        title="PERMANENTLY DELETE this report and remove from database"
+                      >
+                        <i className="bi bi-trash-fill"></i> Remove
                       </button>
                     </div>
                   </div>
@@ -449,8 +501,8 @@ export default function AdminPanel() {
       
       <ConfirmModal 
         open={confirmOpen} 
-        title="Update Status" 
-        message="Are you sure you want to update this report's status?" 
+        title={confirmPayload?.action === 'delete' ? 'DELETE REPORT' : `Change Status to ${confirmPayload?.status?.toUpperCase()}`}
+        message={getStatusChangeMessage()}
         onCancel={() => setConfirmOpen(false)} 
         onConfirm={performStatusChange} 
       />
