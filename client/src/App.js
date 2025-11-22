@@ -67,52 +67,75 @@ function Navigation() {
 
   return (
     <nav className={`navbar navbar-expand-md ${isLanding ? 'navbar-landing fixed-top' : 'navbar-dark bg-primary shadow-sm'}`} 
-         style={isLanding ? { backgroundColor: 'rgba(11, 92, 255, 0.95)', backdropFilter: 'blur(10px)' } : {}}>
+         style={isLanding ? { backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } : {}}>
       <div className="container-fluid px-3 px-md-4">
-        <Link className="navbar-brand fw-bold d-flex align-items-center brand-logo" to="/">
+        <Link className="navbar-brand fw-bold d-flex align-items-center brand-logo" to="/" 
+              style={isLanding ? { color: '#111' } : {}}>
           <i className="bi bi-map-fill me-2 brand-icon"></i>
           <span className="brand-text">StreetSense</span>
         </Link>
-        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-          <span className="navbar-toggler-icon"></span>
+        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                style={isLanding ? { borderColor: '#ddd' } : {}}>
+          <span className="navbar-toggler-icon" style={isLanding ? { filter: 'invert(1)' } : {}}></span>
         </button>
         <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav ms-auto align-items-center gap-2">
-            <li className="nav-item">
-              <Link className="nav-link" to="/">Home</Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/map">Live Map</Link>
-            </li>
-            {isLoggedIn && (
-              <li className="nav-item">
-                <Link className="nav-link" to="/profile">
-                  <i className="bi bi-person-circle me-1"></i> Profile
-                </Link>
-              </li>
-            )}
-            {isLoggedIn ? (
+          <ul className="navbar-nav ms-auto align-items-center gap-3">
+            {isLanding && (
               <>
-                <li className="nav-item ms-md-2">
-                  <span className="navbar-text text-white-50 small me-2">
-                    <i className="bi bi-person-circle"></i> {userEmail.split('@')[0]}
-                  </span>
+                <li className="nav-item">
+                  <Link className="nav-link nav-link-landing" to="/map">Live Map</Link>
                 </li>
                 <li className="nav-item">
-                  <button 
-                    onClick={handleLogout} 
-                    className="btn btn-outline-light btn-sm fw-semibold px-3"
-                  >
-                    <i className="bi bi-box-arrow-right"></i> Logout
-                  </button>
+                  <Link to="/auth" className="btn-nav-signup">
+                    Sign Up
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link to="/auth" className="btn-nav-login">
+                    Login
+                  </Link>
                 </li>
               </>
-            ) : !isLanding && (
-              <li className="nav-item ms-md-2">
-                <Link to="/auth" className="btn btn-light btn-sm fw-semibold text-primary px-3">
-                  <i className="bi bi-box-arrow-in-right"></i> Login
-                </Link>
-              </li>
+            )}
+            {!isLanding && (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/">Home</Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/map">Live Map</Link>
+                </li>
+                {isLoggedIn && (
+                  <li className="nav-item">
+                    <Link className="nav-link" to="/profile">
+                      <i className="bi bi-person-circle me-1"></i> Profile
+                    </Link>
+                  </li>
+                )}
+                {isLoggedIn ? (
+                  <>
+                    <li className="nav-item ms-md-2">
+                      <span className="navbar-text text-white-50 small me-2">
+                        <i className="bi bi-person-circle"></i> {userEmail.split('@')[0]}
+                      </span>
+                    </li>
+                    <li className="nav-item">
+                      <button 
+                        onClick={handleLogout} 
+                        className="btn btn-outline-light btn-sm fw-semibold px-3"
+                      >
+                        <i className="bi bi-box-arrow-right"></i> Logout
+                      </button>
+                    </li>
+                  </>
+                ) : (
+                  <li className="nav-item ms-md-2">
+                    <Link to="/auth" className="btn btn-light btn-sm fw-semibold text-primary px-3">
+                      <i className="bi bi-box-arrow-in-right"></i> Login
+                    </Link>
+                  </li>
+                )}
+              </>
             )}
           </ul>
         </div>
