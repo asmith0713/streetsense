@@ -1,19 +1,46 @@
 // client/src/pages/AuthPage.jsx
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import API from '../api';
 
 export default function AuthPage() {
+  const [searchParams] = useSearchParams();
+  const isAdminMode = searchParams.get('admin') === 'true';
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
+    // Handle admin login
+    if (isAdminMode) {
+      try {
+        // Verify admin password
+        await API.head('/reports/export', { 
+          headers: { 'x-admin-password': adminPassword }
+        });
+        sessionStorage.setItem('streetsense_admin_pwd', adminPassword);
+        console.log('Admin authentication successful');
+        navigate('/admin');
+      } catch (err) {
+        console.error('Admin auth error:', err);
+        const errorMsg = err.response?.status === 401 
+          ? 'Invalid admin password. Access denied.' 
+          : 'Failed to verify admin credentials. Please try again.';
+        alert(errorMsg);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    
+    // Handle regular user login/register
     try {
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
       const res = await API.post(endpoint, { email, password });
@@ -89,11 +116,42 @@ export default function AuthPage() {
             <div className="card shadow-sm border-0">
               <div className="card-body p-4">
                 <div className="text-center mb-4">
-                  <h2 className="h4 mb-1">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-                  <p className="text-muted small">{isLogin ? 'Sign in to continue' : 'Join to report issues'}</p>
+                  <h2 className="h4 mb-1">
+                    {isAdminMode ? 'Admin Access' : (isLogin ? 'Welcome Back' : 'Create Account')}
+                  </h2>
+                  <p className="text-muted small">
+                    {isAdminMode ? 'Enter admin credentials' : (isLogin ? 'Sign in to continue' : 'Join to report issues')}
+                  </p>
                 </div>
 
-                <form onSubmit={handleSubmit}>
+                {isAdminMode ? (
+                  <form onSubmit={handleSubmit}>
+                    <div className="mb-4">
+                      <label className="form-label small fw-bold">Admin Password</label>
+                      <input 
+                        type="password" 
+                        className="form-control form-control-lg"
+                        value={adminPassword} 
+                        onChange={(e) => setAdminPassword(e.target.value)} 
+                        placeholder="••••••••"
+                        required 
+                      />
+                    </div>
+
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary btn-lg w-100 mb-3"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <span><span className="spinner-border spinner-border-sm me-2"></span>Loading...</span>
+                      ) : (
+                        'Access Admin Panel'
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleSubmit}>
                   <div className="mb-3">
                     <label className="form-label small fw-bold">Email Address</label>
                     <input 
@@ -131,7 +189,10 @@ export default function AuthPage() {
                     )}
                   </button>
                 </form>
+                )}
 
+                {!isAdminMode && (
+                <>
                 <div className="position-relative my-4">
                   <hr className="border-secondary" />
                   <span className="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small">
@@ -162,6 +223,8 @@ export default function AuthPage() {
                     </button>
                   </p>
                 </div>
+                </>
+                )}
               </div>
             </div>
             <div className="text-center mt-4">

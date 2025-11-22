@@ -5,6 +5,7 @@ import MapPage from './pages/MapPage';
 import AdminPanel from './pages/AdminPanel';
 import AuthPage from './pages/AuthPage'; 
 import ProfilePage from './pages/ProfilePage';
+import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import './index.css';
 import './App.css';
 
@@ -90,9 +91,6 @@ function Navigation() {
                 </Link>
               </li>
             )}
-            <li className="nav-item">
-              <Link className="nav-link" to="/admin">Admin</Link>
-            </li>
             {isLoggedIn ? (
               <>
                 <li className="nav-item ms-md-2">
@@ -133,7 +131,11 @@ export default function App() {
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/map" element={<MapPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin" element={
+            <ProtectedAdminRoute>
+              <AdminPanel />
+            </ProtectedAdminRoute>
+          } />
         </Routes>
       </main>
     </div>

@@ -1,7 +1,22 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+
+  // Secret keyboard shortcut for admin access: Ctrl+Shift+A
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        navigate('/auth?admin=true');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [navigate]);
+
   return (
     <div className="landing-page">
       {/* Hero Section */}
@@ -19,9 +34,6 @@ export default function LandingPage() {
             {/* Redirect to Auth instead of Map directly */}
             <Link to="/auth" className="btn-primary-lg">
               Get Started
-            </Link>
-            <Link to="/admin" className="btn-secondary-lg">
-              Admin Portal
             </Link>
           </div>
           <div className="hero-stats">
@@ -103,9 +115,8 @@ export default function LandingPage() {
           <div className="footer-brand">StreetSense</div>
           <div className="footer-links">
             <Link to="/map">Map</Link>
-            <Link to="/admin">Admin</Link>
-            <a href="#">About</a>
-            <a href="#">Privacy</a>
+            {/* <a href="#">About</a> */}
+            {/* <a href="#">Privacy</a> */}
           </div>
           <div className="footer-copy">
             &copy; {new Date().getFullYear()} StreetSense Project. All rights reserved.
