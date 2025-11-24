@@ -27,6 +27,8 @@ Thumbs.db
 
 #Markdowns
 *.md
+GOOGLE_OAUTH_SETUP.md
+PRODUCTION_SETUP.md
 !README.md
 # HTML Files
 client/public/test-admin.html
