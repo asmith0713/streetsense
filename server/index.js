@@ -48,7 +48,7 @@ app.use(helmet({
 }));
 
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'],
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000','http://192.168.0.102:3000','http://0.0.0.0:3000'],
   credentials: true,
   optionsSuccessStatus: 200,
   maxAge: 86400,
@@ -94,6 +94,40 @@ app.use('/api/reports', reportsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/locations', locationsRouter);
 app.use('/api/emergency', emergencyRouter);
+
+// Serve React App in Production
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '../client/build');
+  
+  // Serve static files from React build
+  app.use(express.static(clientBuildPath, {
+    maxAge: '1d',
+    etag: true,
+    index: false // Don't auto-serve index.html here
+  }));
+  
+  // Cache static assets aggressively
+  app.use('/static', express.static(path.join(clientBuildPath, 'static'), {
+    maxAge: '1y',
+    immutable: true
+  }));
+  
+  // SPA Routing: Serve index.html for all non-API routes
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/') || req.path.startsWith('/data/')) {
+      return next();
+    }
+    
+    // Serve index.html for all React Router routes
+    res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err);
+        res.status(500).send('Error loading application');
+      }
+    });
+  });
+}
 
 // Health Check
 app.get('/health', async (req, res) => {
