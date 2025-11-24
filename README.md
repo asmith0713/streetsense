@@ -332,7 +332,7 @@ For detailed production deployment instructions including:
 - Security hardening
 - Monitoring & health checks
 
-**See [PRODUCTION_DEPLOY.md](PRODUCTION_DEPLOY.md)**
+
 
 ### Quick Production Checklist
 - ✅ Use MongoDB Atlas or secure MongoDB instance
