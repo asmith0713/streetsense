@@ -307,6 +307,22 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div className="col-md-6">
+                    <label className="form-label">
+                      Telegram ID 
+                      <i className="bi bi-telegram text-primary ms-1"></i>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={contact.telegramId || ''}
+                      onChange={(e) => updateEmergencyContact(index, 'telegramId', e.target.value)}
+                      placeholder="e.g., 123456789 or @username"
+                    />
+                    <small className="text-muted">
+                      For instant emergency alerts
+                    </small>
+                  </div>
+                  <div className="col-md-6">
                     <label className="form-label">Relationship</label>
                     <select
                       className="form-select"
@@ -342,6 +358,15 @@ export default function ProfilePage() {
                 </div>
               </div>
             ))}
+            <div className="alert alert-info mt-3">
+              <strong><i className="bi bi-telegram me-2"></i>How to get your Telegram ID:</strong>
+              <ol className="mb-0 mt-2 small">
+                <li>Open Telegram and search for <code>@userinfobot</code></li>
+                <li>Start a chat and send <code>/start</code></li>
+                <li>The bot will reply with your Telegram ID (a number)</li>
+                <li>Enter that ID here to receive emergency alerts</li>
+              </ol>
+            </div>
             <small className="text-muted">
               <i className="bi bi-info-circle me-1"></i>
               These contacts will be notified in case of an emergency

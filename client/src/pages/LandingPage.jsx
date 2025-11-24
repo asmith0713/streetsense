@@ -35,7 +35,7 @@ export default function LandingPage() {
             Report potholes, garbage, and safety issues. Track with heat maps. 
             Vote on community issues. Emergency SOS with location sharing.
           </p>
-          <Link to="/auth" className="btn-hero">
+          <Link to="/signup" className="btn-hero">
             Start Reporting
           </Link>
         </div>
@@ -104,7 +104,7 @@ export default function LandingPage() {
                 <li>Crowd density heatmap layer</li>
                 <li>Privacy-focused (no personal data)</li>
               </ul>
-              <Link to="/auth" className="feature-cta">Join map <span>→</span></Link>
+              <Link to="/signup" className="feature-cta">Join map <span>→</span></Link>
             </div>
           </div>
 
@@ -125,7 +125,7 @@ export default function LandingPage() {
                 <li>Sort by votes for prioritization</li>
                 <li>Prevents fake reports</li>
               </ul>
-              <Link to="/auth" className="feature-cta">Start voting <span>→</span></Link>
+              <Link to="/signup" className="feature-cta">Start voting <span>→</span></Link>
             </div>
           </div>
 
@@ -144,9 +144,9 @@ export default function LandingPage() {
                 <li>Share GPS coordinates instantly</li>
                 <li>Helpline numbers (Police, Fire, Ambulance)</li>
                 <li>Emergency profile with medical info</li>
-                {/* <li>Telegram notifications to contacts</li> */}
+                <li>Telegram notifications to contacts</li>
               </ul>
-              <Link to="/auth" className="feature-cta">Setup profile <span>→</span></Link>
+              <Link to="/account" className="feature-cta">Setup profile <span>→</span></Link>
             </div>
           </div>
         </div>
@@ -277,7 +277,7 @@ export default function LandingPage() {
       <section className="final-cta-section">
         <h2 className="final-cta-title">Built for Hackathon/Buildathon</h2>
         <p className="final-cta-subtitle">Full-stack civic reporting platform with real-time features</p>
-        <Link to="/auth" className="btn-hero">
+        <Link to="/signup" className="btn-hero">
           Try the Demo
         </Link>
       </section>
@@ -293,9 +293,9 @@ export default function LandingPage() {
           </div>
           <div className="footer-section">
             <h4>Platform</h4>
-            <Link to="/map">Live Map</Link>
-            <Link to="/auth">Sign Up</Link>
-            <Link to="/auth">Login</Link>
+            <Link to="/live">Live Map</Link>
+            <Link to="/signup">Sign Up</Link>
+            <Link to="/login">Login</Link>
           </div>
           <div className="footer-section">
             <h4>About</h4>

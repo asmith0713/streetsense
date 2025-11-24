@@ -7,6 +7,7 @@ const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const fs = require('fs'); // Added to check if folders exist
+const { verifyBotToken } = require('./utils/telegram');
 
 dotenv.config();
 
@@ -186,6 +187,15 @@ const gracefulShutdown = async (signal) => {
 async function start() {
   // Connect to DB
   await connectToMongoDB();
+  
+  // Verify Telegram Bot (optional, won't block startup)
+  if (process.env.TELEGRAM_BOT_TOKEN) {
+    verifyBotToken().catch(err => {
+      console.warn('⚠️ Telegram bot verification failed. Emergency notifications will not work.');
+    });
+  } else {
+    console.warn('⚠️ TELEGRAM_BOT_TOKEN not set. Emergency Telegram notifications disabled.');
+  }
   
   // Start Server
   server = app.listen(PORT, '0.0.0.0', () => {

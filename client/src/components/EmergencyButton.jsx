@@ -33,8 +33,22 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
       return;
     }
 
+    // Check if HTTPS or localhost (critical for mobile)
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      setError('Geolocation requires HTTPS. Please access via https:// or use desktop.');
+      return;
+    }
+
     setFetchingLocation(true);
     setError(null);
+
+    // Mobile-optimized settings
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 15000, // Longer timeout for mobile
+      maximumAge: isMobile ? 10000 : 30000
+    };
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -53,13 +67,16 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
         let errorMsg = 'Failed to get location. ';
         switch (err.code) {
           case 1:
-            errorMsg += 'Please allow location access in your browser settings.';
+            errorMsg += 'Please allow location access in your browser/device settings.';
+            if (isMobile) {
+              errorMsg += ' On mobile: Settings → Browser → Location → Allow';
+            }
             break;
           case 2:
-            errorMsg += 'Location unavailable. Check your GPS.';
+            errorMsg += 'Location unavailable. Check if GPS/Location Services are enabled on your device.';
             break;
           case 3:
-            errorMsg += 'Location request timed out.';
+            errorMsg += 'Location request timed out. Try again with better signal.';
             break;
           default:
             errorMsg += 'Unknown error.';
@@ -67,11 +84,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
         setError(errorMsg);
         setFetchingLocation(false);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 30000
-      }
+      geoOptions
     );
   };
 

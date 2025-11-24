@@ -83,15 +83,15 @@ function Navigation() {
             {isLanding && (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link nav-link-landing" to="/map">Live Map</Link>
+                  <Link className="nav-link nav-link-landing" to="/live">Live Map</Link>
                 </li>
                 <li className="nav-item">
-                  <Link to="/auth" className="btn-nav-signup">
+                  <Link to="/signup" className="btn-nav-signup">
                     Sign Up
                   </Link>
                 </li>
                 <li className="nav-item">
-                  <Link to="/auth" className="btn-nav-login">
+                  <Link to="/login" className="btn-nav-login">
                     Login
                   </Link>
                 </li>
@@ -103,12 +103,12 @@ function Navigation() {
                   <Link className="nav-link" to="/">Home</Link>
                 </li>
                 <li className="nav-item">
-                  <Link className="nav-link" to="/map">Live Map</Link>
+                  <Link className="nav-link" to="/live">Live Map</Link>
                 </li>
                 {isLoggedIn && (
                   <li className="nav-item">
-                    <Link className="nav-link" to="/profile">
-                      <i className="bi bi-person-circle me-1"></i> Profile
+                    <Link className="nav-link" to="/account">
+                      <i className="bi bi-person-circle me-1"></i> Account
                     </Link>
                   </li>
                 )}
@@ -130,7 +130,7 @@ function Navigation() {
                   </>
                 ) : (
                   <li className="nav-item ms-md-2">
-                    <Link to="/auth" className="btn btn-light btn-sm fw-semibold text-primary px-3">
+                    <Link to="/login" className="btn btn-light btn-sm fw-semibold text-primary px-3">
                       <i className="bi bi-box-arrow-in-right"></i> Login
                     </Link>
                   </li>
@@ -150,15 +150,38 @@ export default function App() {
       <Navigation />
       <main className="flex-grow-1 d-flex flex-column position-relative overflow-hidden">
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/auth" element={<AuthPage />} />
+          
+          {/* Authentication Routes */}
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/signup" element={<AuthPage />} />
+          <Route path="/auth" element={<AuthPage />} /> {/* Legacy support */}
+          
+          {/* App Routes */}
           <Route path="/map" element={<MapPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/reports" element={<MapPage />} /> {/* Alias for map */}
+          <Route path="/live" element={<MapPage />} /> {/* Alias for live map */}
+          
+          {/* User Routes */}
+          <Route path="/account" element={<ProfilePage />} />
+          <Route path="/account/profile" element={<ProfilePage />} />
+          <Route path="/profile" element={<ProfilePage />} /> {/* Legacy support */}
+          
+          {/* Admin Routes - Hidden */}
           <Route path="/admin" element={
             <ProtectedAdminRoute>
               <AdminPanel />
             </ProtectedAdminRoute>
           } />
+          <Route path="/admin/dashboard" element={
+            <ProtectedAdminRoute>
+              <AdminPanel />
+            </ProtectedAdminRoute>
+          } />
+          
+          {/* 404 - Redirect to home */}
+          <Route path="*" element={<LandingPage />} />
         </Routes>
       </main>
     </div>

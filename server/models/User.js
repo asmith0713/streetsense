@@ -40,6 +40,10 @@ const UserSchema = new mongoose.Schema({
       required: true,
       trim: true
     },
+    telegramId: {
+      type: String,
+      trim: true
+    },
     relationship: {
       type: String,
       enum: ['family', 'mother', 'father', 'brother', 'sister', 'cousin', 'relative', 'friend'],

@@ -12,6 +12,7 @@ import HeatLegend from '../components/HeatLegend';
 import CrowdHeatmapLayer from '../components/CrowdHeatmapLayer';
 import CrowdLegend from '../components/CrowdLegend';
 import EmergencyButton from '../components/EmergencyButton';
+import LocationPermissionGuide from '../components/LocationPermissionGuide';
 
 // CSS / Leaflet Assets
 import 'leaflet/dist/leaflet.css'; // Ensure CSS is imported
@@ -114,6 +115,7 @@ export default function MapPage() {
     localStorage.getItem('streetsense_tracking') === 'true'
   );
   const [locationError, setLocationError] = useState(null);
+  const [showLocationGuide, setShowLocationGuide] = useState(false);
   
   // Interaction State
   const [formLatLng, setFormLatLng] = useState(null);
@@ -336,10 +338,10 @@ export default function MapPage() {
   // Location Logic
   const getLocationErrorMessage = (code) => {
     switch (code) {
-      case 1: return 'Location permission denied.';
-      case 2: return 'Location unavailable (check GPS).';
-      case 3: return 'Location request timed out.';
-      default: return 'Unknown location error.';
+      case 1: return 'Location permission denied. Click "Help" button for instructions.';
+      case 2: return 'Location unavailable. Check if GPS/Location Services are enabled on your device.';
+      case 3: return 'Location request timed out. Try again with better signal.';
+      default: return 'Unknown location error. Check browser permissions.';
     }
   };
 
@@ -379,8 +381,22 @@ export default function MapPage() {
       return;
     }
     
+    // Check if HTTPS or localhost (required for geolocation on mobile)
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      setLocationError('Geolocation requires HTTPS connection on mobile devices');
+      return;
+    }
+    
     // Clear any previous errors
     setLocationError(null);
+    
+    // Mobile-optimized geolocation settings
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const geoOptions = {
+      enableHighAccuracy: isMobile, // High accuracy important for mobile
+      timeout: 15000, // Longer timeout for mobile
+      maximumAge: isMobile ? 10000 : 5000 // Cache longer on mobile to reduce battery drain
+    };
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -398,11 +414,7 @@ export default function MapPage() {
         }
       }, 
       handleLocationError, 
-      { 
-        enableHighAccuracy: true, 
-        timeout: 10000,
-        maximumAge: 5000 // Use cached position if less than 5 seconds old
-      }
+      geoOptions
     );
   };
 
@@ -412,8 +424,22 @@ export default function MapPage() {
       return;
     }
     
+    // Check if HTTPS or localhost
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      setLocationError('Geolocation requires HTTPS connection on mobile devices');
+      return;
+    }
+    
     // Clear any previous errors
     setLocationError(null);
+    
+    // Mobile-optimized settings
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: isMobile ? 5000 : 0 // Small cache on mobile for battery
+    };
     
     // Get initial position first
     navigator.geolocation.getCurrentPosition(
@@ -436,17 +462,13 @@ export default function MapPage() {
         watchIdRef.current = navigator.geolocation.watchPosition(
           handleLocationSuccess,
           handleLocationError,
-          { 
-            enableHighAccuracy: true, 
-            timeout: 10000, 
-            maximumAge: 0 
-          }
+          geoOptions
         );
         
         console.log('Live tracking started (persistent)');
       },
       handleLocationError,
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      geoOptions
     );
   }, [mapInstance, handleLocationSuccess, handleLocationError]);
 
@@ -684,10 +706,24 @@ export default function MapPage() {
         <div className="position-absolute top-0 start-50 translate-middle-x mt-5 z-3 pointer-events-auto">
           <div className="alert alert-warning alert-dismissible fade show shadow-sm py-2" role="alert">
             <i className="bi bi-exclamation-triangle-fill me-2"></i> {locationError}
+            <button 
+              type="button" 
+              className="btn btn-sm btn-warning ms-2"
+              onClick={() => setShowLocationGuide(true)}
+              style={{marginRight: '30px'}}
+            >
+              Help
+            </button>
             <button type="button" className="btn-close py-2" onClick={() => setLocationError(null)}></button>
           </div>
         </div>
       )}
+
+      {/* --- LOCATION PERMISSION GUIDE MODAL --- */}
+      <LocationPermissionGuide 
+        show={showLocationGuide} 
+        onClose={() => setShowLocationGuide(false)} 
+      />
 
       {/* --- LOCATION BROADCASTING INFO --- */}
       {shareLocationEnabled && userLocation && (
