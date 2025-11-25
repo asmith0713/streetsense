@@ -2,7 +2,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
+import { motion } from 'framer-motion';
+import { LogIn, UserPlus, Shield, ArrowRight, ArrowLeft } from 'lucide-react';
 import API from '../api';
+import { setCookie } from '../utils/cookies';
 
 export default function AuthPage() {
   const [searchParams] = useSearchParams();
@@ -46,6 +49,10 @@ export default function AuthPage() {
       const res = await API.post(endpoint, { email, password });
       
       // Store authentication data with consistent keys
+      setCookie('token', res.data.token);
+      setCookie('user_id', res.data.user.id);
+      setCookie('user_email', res.data.user.email);
+
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('streetsense_token', res.data.token);
       localStorage.setItem('user_id', res.data.user.id);
@@ -79,6 +86,10 @@ export default function AuthPage() {
       });
 
       // Store authentication data with consistent keys
+      setCookie('token', res.data.token);
+      setCookie('user_id', res.data.user.id);
+      setCookie('user_email', res.data.user.email);
+
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('streetsense_token', res.data.token);
       localStorage.setItem('user_id', res.data.user.id);
@@ -106,133 +117,121 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
-      <div className="container">
-        <div className="row justify-content-center">
-          <div className="col-12 col-md-6 col-lg-4">
-            <div className="text-center mb-4">
-              <h1 className="h3 fw-bold text-primary"><i className="bi bi-map-fill"></i> StreetSense</h1>
-            </div>
-            <div className="card shadow-sm border-0">
-              <div className="card-body p-4">
-                <div className="text-center mb-4">
-                  <h2 className="h4 mb-1">
-                    {isAdminMode ? 'Admin Access' : (isLogin ? 'Welcome Back' : 'Create Account')}
-                  </h2>
-                  <p className="text-muted small">
-                    {isAdminMode ? 'Enter admin credentials' : (isLogin ? 'Sign in to continue' : 'Join to report issues')}
-                  </p>
-                </div>
-
-                {isAdminMode ? (
-                  <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                      <label className="form-label small fw-bold">Admin Password</label>
-                      <input 
-                        type="password" 
-                        className="form-control form-control-lg"
-                        value={adminPassword} 
-                        onChange={(e) => setAdminPassword(e.target.value)} 
-                        placeholder="••••••••"
-                        required 
-                      />
-                    </div>
-
-                    <button 
-                      type="submit" 
-                      className="btn btn-primary btn-lg w-100 mb-3"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <span><span className="spinner-border spinner-border-sm me-2"></span>Loading...</span>
-                      ) : (
-                        'Access Admin Panel'
-                      )}
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleSubmit}>
-                  <div className="mb-3">
-                    <label className="form-label small fw-bold">Email Address</label>
-                    <input 
-                      type="email" 
-                      className="form-control form-control-lg"
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
-                      placeholder="name@example.com"
-                      required 
-                    />
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="form-label small fw-bold">Password</label>
-                    <input 
-                      type="password" 
-                      className="form-control form-control-lg"
-                      value={password} 
-                      onChange={(e) => setPassword(e.target.value)} 
-                      placeholder="••••••••"
-                      required 
-                      minLength={6}
-                    />
-                  </div>
-
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary btn-lg w-100 mb-3"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <span><span className="spinner-border spinner-border-sm me-2"></span>Loading...</span>
-                    ) : (
-                      isLogin ? 'Sign In' : 'Create Account'
-                    )}
-                  </button>
-                </form>
-                )}
-
-                {!isAdminMode && (
-                <>
-                <div className="position-relative my-4">
-                  <hr className="border-secondary" />
-                  <span className="position-absolute top-50 start-50 translate-middle bg-white px-3 text-muted small">
-                    OR
-                  </span>
-                </div>
-
-                <div className="d-flex justify-content-center mb-3">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    useOneTap
-                    text={isLogin ? 'signin_with' : 'signup_with'}
-                    shape="rectangular"
-                    size="large"
-                    width="100%"
-                  />
-                </div>
-
-                <div className="text-center mt-3">
-                  <p className="small text-muted mb-0">
-                    {isLogin ? "New here? " : "Already have an account? "}
-                    <button 
-                      className="btn btn-link btn-sm p-0 text-decoration-none fw-bold"
-                      onClick={() => setIsLogin(!isLogin)}
-                    >
-                      {isLogin ? 'Sign up' : 'Log in'}
-                    </button>
-                  </p>
-                </div>
-                </>
-                )}
-              </div>
-            </div>
-            <div className="text-center mt-4">
-              <Link to="/" className="text-muted text-decoration-none small"><i className="bi bi-arrow-left"></i> Back to Home</Link>
-            </div>
+    <div className="page-container auth-page-bg d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="glass-panel p-5"
+        style={{ width: '100%', maxWidth: '450px' }}
+      >
+        <div className="text-center mb-4">
+          <div className="auth-icon-circle d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3">
+            {isAdminMode ? <Shield size={32} className="text-primary" /> : <LogIn size={32} className="text-primary" />}
           </div>
+          <h2 className="fw-bold mb-1">{isAdminMode ? 'Admin Access' : (isLogin ? 'Welcome Back' : 'Create Account')}</h2>
+          <p className="text-muted small">
+            {isAdminMode 
+              ? 'Enter secure credentials to continue' 
+              : (isLogin ? 'Enter your details to access your account' : 'Join the community to start reporting')}
+          </p>
         </div>
-      </div>
+
+        <form onSubmit={handleSubmit}>
+          {isAdminMode ? (
+            <div className="mb-4">
+              <label className="form-label small fw-bold text-muted">Admin Password</label>
+              <input
+                type="password"
+                className="input-modern"
+                placeholder="Enter admin password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                required
+              />
+            </div>
+          ) : (
+            <>
+              <div className="mb-3">
+                <label className="form-label small fw-bold text-muted">Email Address</label>
+                <input
+                  type="email"
+                  className="input-modern"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="form-label small fw-bold text-muted">Password</label>
+                <input
+                  type="password"
+                  className="input-modern"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </>
+          )}
+
+          <button 
+            type="submit" 
+            className="btn-primary-modern w-100 mb-3"
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            ) : (
+              <>
+                {isAdminMode ? 'Access Dashboard' : (isLogin ? 'Sign In' : 'Create Account')}
+                <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+
+          {!isAdminMode && (
+            <>
+              <div className="position-relative mb-4">
+                <hr className="text-muted" />
+                <span className="position-absolute top-50 start-50 translate-middle px-2 bg-card text-muted small">OR</span>
+              </div>
+
+              <div className="d-flex justify-content-center mb-4">
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  useOneTap
+                  theme="filled_blue"
+                  shape="pill"
+                />
+              </div>
+
+              <div className="text-center">
+                <p className="text-muted small mb-0">
+                  {isLogin ? "Don't have an account? " : "Already have an account? "}
+                  <button
+                    type="button"
+                    className="btn btn-link p-0 text-decoration-none fw-bold"
+                    onClick={() => setIsLogin(!isLogin)}
+                    style={{ color: 'var(--primary)' }}
+                  >
+                    {isLogin ? 'Sign up' : 'Log in'}
+                  </button>
+                </p>
+              </div>
+            </>
+          )}
+        </form>
+        
+        <div className="text-center mt-4">
+          <Link to="/" className="text-muted text-decoration-none small d-inline-flex align-items-center gap-1">
+            <ArrowLeft size={14} /> Back to Home
+          </Link>
+        </div>
+      </motion.div>
     </div>
   );
 }

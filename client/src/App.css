@@ -83,14 +83,14 @@ html {
 /* Navbar Brand Styling */
 .brand-logo {
   font-size: 1.5rem;
-  color: white !important;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  color: var(--foreground);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
   transition: all 0.3s ease;
 }
 
 .brand-logo:hover {
   transform: scale(1.05);
-  text-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  text-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 .brand-icon {
@@ -167,7 +167,7 @@ html {
 
 /* Landing Page Container */
 .landing-page {
-  background-color: #fff;
+  background-color: var(--background);
   overflow-x: hidden;
 }
 
@@ -177,12 +177,12 @@ html {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: radial-gradient(circle at top left, #eef2ff 0%, #fff 40%);
+  background: var(--background);
   padding: 1rem;
 }
 
 .auth-card {
-  background: white;
+  background: var(--card);
   padding: 40px;
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05);
@@ -273,7 +273,7 @@ html {
   align-items: center;
   justify-content: space-between;
   padding: 120px 6% 80px;
-  background: radial-gradient(circle at top right, #eef2ff 0%, #fff 40%);
+  background: var(--background);
   position: relative;
   gap: 60px;
   min-height: 100vh;
@@ -526,14 +526,14 @@ html {
 }
 
 .btn-secondary-lg {
-  background: white;
-  color: var(--text-main);
-  border: 1px solid #e5e7eb;
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
 }
 .btn-secondary-lg:hover {
   border-color: var(--primary);
   color: var(--primary);
-  background: #f8fafc;
+  background: var(--secondary);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
@@ -579,7 +579,7 @@ html {
   width: 100%;
   max-width: 500px;
   aspect-ratio: 4/3;
-  background: white;
+  background: var(--card);
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05);
   position: relative;
@@ -646,7 +646,7 @@ html {
   bottom: 20px;
   left: 20px;
   right: 20px;
-  background: white;
+  background: var(--card);
   padding: 12px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -683,7 +683,7 @@ html {
 /* Features Section */
 .features-section {
   padding: 80px 6%;
-  background: white;
+  background: var(--background);
 }
 
 .section-title {
@@ -734,8 +734,8 @@ html {
 .feature-card {
   padding: 32px;
   border-radius: 24px;
-  background: #fff;
-  border: 1px solid #f3f4f6;
+  background: var(--card);
+  border: 1px solid var(--border);
   transition: all 0.3s ease;
 }
 
@@ -1019,7 +1019,7 @@ html {
   }
   
   .stat-item {
-    background: white;
+    background: var(--card);
     padding: 10px 20px;
     border-radius: 12px;
     box-shadow: var(--shadow-sm);
@@ -1219,7 +1219,7 @@ html {
 /* Hero Section - Modern Style */
 .hero-section {
   padding: 140px 6% 100px;
-  background: linear-gradient(135deg, #f8faff 0%, #ffffff 100%);
+  background: var(--background);
   text-align: center;
   min-height: 75vh;
   display: flex;
@@ -1338,7 +1338,7 @@ html {
 }
 
 .feature-right {
-  background: white;
+  background: var(--card);
   padding: 32px;
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.04);
@@ -1385,7 +1385,7 @@ html {
 /* Testimonials Section - Tech Stack */
 .testimonials-section {
   padding: 100px 6%;
-  background: white;
+  background: var(--background);
   text-align: center;
 }
 
@@ -1464,7 +1464,7 @@ html {
 }
 
 .faq-item {
-  background: white;
+  background: var(--card);
   border-radius: 12px;
   margin-bottom: 16px;
   overflow: hidden;
@@ -1488,7 +1488,7 @@ html {
 }
 
 .faq-question:hover {
-  background: #fafafa;
+  background: var(--secondary);
 }
 
 .faq-question.active {
@@ -1542,20 +1542,35 @@ html {
 }
 
 .final-cta-section .btn-hero {
-  background: white;
+  background: var(--card);
   color: var(--primary);
 }
 
 .final-cta-section .btn-hero:hover {
-  background: #f3f4f6;
+  background: var(--secondary);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .final-cta-section .btn-hero {
+  background: var(--card);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .final-cta-section .btn-hero:hover {
+  background: var(--secondary);
   color: var(--primary);
 }
 
 /* Footer */
 .landing-footer {
-  background: #111;
-  color: white;
+  background: var(--card);
+  color: var(--foreground);
   padding: 60px 6% 30px;
+}
+
+[data-theme="dark"] .landing-footer {
+  background: var(--card);
+  border-top: 1px solid var(--border);
 }
 
 .footer-content {

@@ -98,10 +98,14 @@ router.post('/', emergencyLimiter, authMiddleware, async (req, res) => {
 
     // Fetch user profile and send Telegram notifications
     let telegramResults = [];
+    let personalContacts = [];
+    
     if (userId) {
       try {
         const user = await User.findById(userId).select('name phone emergencyContacts');
         if (user && user.emergencyContacts && user.emergencyContacts.length > 0) {
+          personalContacts = user.emergencyContacts;
+          
           const emergencyData = {
             userName: user.name,
             userPhone: user.phone,
@@ -138,6 +142,7 @@ router.post('/', emergencyLimiter, authMiddleware, async (req, res) => {
         createdAt: emergency.createdAt
       },
       emergencyContacts: EMERGENCY_CONTACTS,
+      personalContacts: personalContacts,
       contactedAuthorities: emergency.authorities.map(a => ({
         type: a.type,
         number: a.contactNumber

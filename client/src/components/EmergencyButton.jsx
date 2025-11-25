@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Alert } from 'react-bootstrap';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, Phone, ShieldAlert, HeartPulse, Eye, X, MapPin, Loader2 } from 'lucide-react';
 import API from '../api';
 
 export default function EmergencyButton({ userLocation, onEmergencyCreated, onLocationRequest }) {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emergencyContacts, setEmergencyContacts] = useState(null);
+  const [personalContacts, setPersonalContacts] = useState([]);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(userLocation);
 
-  // Update location when prop changes
   useEffect(() => {
     setCurrentLocation(userLocation);
   }, [userLocation]);
@@ -20,8 +21,6 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
     setShow(true);
     setError(null);
     setSuccess(false);
-    
-    // Auto-request location if not available
     if (!userLocation && !fetchingLocation) {
       requestLocation();
     }
@@ -29,24 +28,17 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
-      setError('Geolocation not supported by your browser');
-      return;
-    }
-
-    // Check if HTTPS or localhost (critical for mobile)
-    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-      setError('Geolocation requires HTTPS. Please access via https:// or use desktop.');
+      setError('Geolocation not supported');
       return;
     }
 
     setFetchingLocation(true);
     setError(null);
 
-    // Mobile-optimized settings
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const geoOptions = {
       enableHighAccuracy: true,
-      timeout: 15000, // Longer timeout for mobile
+      timeout: 15000,
       maximumAge: isMobile ? 10000 : 30000
     };
 
@@ -56,32 +48,11 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
         const newLocation = [latitude, longitude];
         setCurrentLocation(newLocation);
         setFetchingLocation(false);
-        
-        // Notify parent component to update location
-        if (onLocationRequest) {
-          onLocationRequest(newLocation);
-        }
+        if (onLocationRequest) onLocationRequest(newLocation);
       },
       (err) => {
         console.error('Location error:', err);
-        let errorMsg = 'Failed to get location. ';
-        switch (err.code) {
-          case 1:
-            errorMsg += 'Please allow location access in your browser/device settings.';
-            if (isMobile) {
-              errorMsg += ' On mobile: Settings → Browser → Location → Allow';
-            }
-            break;
-          case 2:
-            errorMsg += 'Location unavailable. Check if GPS/Location Services are enabled on your device.';
-            break;
-          case 3:
-            errorMsg += 'Location request timed out. Try again with better signal.';
-            break;
-          default:
-            errorMsg += 'Unknown error.';
-        }
-        setError(errorMsg);
+        setError('Failed to get location. Please enable GPS.');
         setFetchingLocation(false);
       },
       geoOptions
@@ -98,7 +69,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
     const locationToUse = currentLocation || userLocation;
     
     if (!locationToUse) {
-      setError('Fetching location... Please wait and try again.');
+      setError('Fetching location... Please wait.');
       requestLocation();
       return;
     }
@@ -108,7 +79,6 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
 
     try {
       const [lat, lng] = locationToUse;
-      
       const response = await API.post('/emergency', {
         type,
         lat,
@@ -118,17 +88,12 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
       });
 
       setEmergencyContacts(response.data.emergencyContacts);
+      setPersonalContacts(response.data.personalContacts || []);
       setSuccess(true);
+      if (onEmergencyCreated) onEmergencyCreated(response.data);
       
-      if (onEmergencyCreated) {
-        onEmergencyCreated(response.data);
-      }
-
-      // Auto-close after showing contacts
-      setTimeout(() => {
-        handleClose();
-      }, 8000);
-
+      // Auto-close after showing contacts for a while
+      // setTimeout(handleClose, 15000); 
     } catch (err) {
       console.error('Emergency creation failed:', err);
       setError(err.response?.data?.error || 'Failed to create emergency alert');
@@ -144,197 +109,178 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
   return (
     <>
       {/* Floating SOS Button */}
-      <Button
-        variant="danger"
+      <motion.button
+        whileHover={{ scale: 1.1 }}
         onClick={handleShow}
+        className="position-fixed rounded-circle d-flex align-items-center justify-content-center border-0 shadow-lg emergency-sos-btn"
         style={{
-          position: 'fixed',
-          bottom: '100px',
-          right: '20px',
-          width: '70px',
-          height: '70px',
-          borderRadius: '50%',
-          fontSize: '20px',
-          fontWeight: 'bold',
-          zIndex: 1000,
-          boxShadow: '0 4px 12px rgba(220, 53, 69, 0.5)',
-          border: '3px solid white'
+          bottom: '30px',
+          right: '30px',
+          width: '64px',
+          height: '64px',
+          zIndex: 1050
         }}
-        className="d-flex align-items-center justify-content-center"
       >
-        SOS
-      </Button>
+        <span className="fw-bold fs-5">SOS</span>
+      </motion.button>
 
-      {/* Emergency Modal */}
-      <Modal show={show} onHide={handleClose} centered>
-        <Modal.Header closeButton style={{ backgroundColor: '#dc3545', color: 'white' }}>
-          <Modal.Title>
-            <i className="bi bi-shield-exclamation me-2"></i>
-            Emergency Assistance
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {error && <Alert variant="danger">{error}</Alert>}
-          
-          {fetchingLocation && (
-            <Alert variant="info">
-              <div className="d-flex align-items-center">
-                <div className="spinner-border spinner-border-sm me-2" role="status">
-                  <span className="visually-hidden">Loading...</span>
+      {/* Modal Overlay */}
+      <AnimatePresence>
+        {show && (
+          <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1060 }}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleClose}
+              className="modal-backdrop-dark position-absolute top-0 start-0 w-100 h-100"
+            />
+            
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="glass-panel p-4 rounded-4 shadow-2xl position-relative mx-3"
+              style={{ width: '100%', maxWidth: '450px', border: '1px solid rgba(255,255,255,0.2)' }}
+            >
+              <button 
+                onClick={handleClose}
+                className="btn btn-link text-muted position-absolute top-0 end-0 p-3 text-decoration-none"
+              >
+                <X size={24} />
+              </button>
+
+              <div className="text-center mb-4">
+                <div className="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger bg-opacity-10 p-3 mb-3">
+                  <ShieldAlert size={32} className="text-danger" />
                 </div>
-                <span>Requesting location access...</span>
-              </div>
-            </Alert>
-          )}
-          
-          {success && emergencyContacts ? (
-            <div>
-              <Alert variant="success">
-                <strong>Emergency Alert Created!</strong>
-                <br />
-                Your emergency has been logged and authorities have been notified.
-              </Alert>
-              
-              <h6 className="mb-3">Emergency Contact Numbers:</h6>
-              <div className="d-grid gap-2">
-                <Button
-                  variant="outline-danger"
-                  onClick={() => makePhoneCall(emergencyContacts.police)}
-                  className="text-start"
-                >
-                  <i className="bi bi-telephone-fill me-2"></i>
-                  Police: {emergencyContacts.police}
-                </Button>
-                <Button
-                  variant="outline-danger"
-                  onClick={() => makePhoneCall(emergencyContacts.womenHelpline)}
-                  className="text-start"
-                >
-                  <i className="bi bi-telephone-fill me-2"></i>
-                  Women Helpline: {emergencyContacts.womenHelpline}
-                </Button>
-                <Button
-                  variant="outline-danger"
-                  onClick={() => makePhoneCall(emergencyContacts.ambulance)}
-                  className="text-start"
-                >
-                  <i className="bi bi-telephone-fill me-2"></i>
-                  Ambulance: {emergencyContacts.ambulance}
-                </Button>
-                <Button
-                  variant="outline-danger"
-                  onClick={() => makePhoneCall(emergencyContacts.nationalEmergency)}
-                  className="text-start"
-                >
-                  <i className="bi bi-telephone-fill me-2"></i>
-                  National Emergency: {emergencyContacts.nationalEmergency}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div>
-              {!currentLocation && !userLocation && !fetchingLocation && (
-                <Alert variant="info" className="mb-3">
-                  <i className="bi bi-info-circle me-2"></i>
-                  We'll request your location when you select an emergency type.
-                </Alert>
-              )}
-              
-              {(currentLocation || userLocation) && (
-                <Alert variant="success" className="mb-3">
-                  <i className="bi bi-check-circle me-2"></i>
-                  Location acquired. Ready to send emergency alert.
-                </Alert>
-              )}
-              
-              <Alert variant="warning">
-                <strong>⚠️ Use only in genuine emergencies</strong>
-                <br />
-                This will alert authorities and log your location.
-              </Alert>
-
-              <h6 className="mb-3">Select Emergency Type:</h6>
-              <div className="d-grid gap-2">
-                <Button
-                  variant="danger"
-                  onClick={() => createEmergency('harassment', 'critical')}
-                  disabled={loading || fetchingLocation}
-                  size="lg"
-                >
-                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                  Harassment / Eve-Teasing
-                </Button>
-                
-                <Button
-                  variant="danger"
-                  onClick={() => createEmergency('assault', 'critical')}
-                  disabled={loading || fetchingLocation}
-                  size="lg"
-                >
-                  <i className="bi bi-shield-exclamation me-2"></i>
-                  Physical Assault
-                </Button>
-                
-                <Button
-                  variant="danger"
-                  onClick={() => createEmergency('stalking', 'high')}
-                  disabled={loading || fetchingLocation}
-                  size="lg"
-                >
-                  <i className="bi bi-eye-fill me-2"></i>
-                  Stalking / Following
-                </Button>
-                
-                <Button
-                  variant="warning"
-                  onClick={() => createEmergency('medical', 'high')}
-                  disabled={loading || fetchingLocation}
-                >
-                  <i className="bi bi-heart-pulse-fill me-2"></i>
-                  Medical Emergency
-                </Button>
-                
-                <Button
-                  variant="secondary"
-                  onClick={() => createEmergency('general', 'medium')}
-                  disabled={loading || fetchingLocation}
-                >
-                  <i className="bi bi-exclamation-circle-fill me-2"></i>
-                  Other Emergency
-                </Button>
+                <h3 className="fw-bold mb-1">Emergency Assistance</h3>
+                <p className="text-muted small">Only use in genuine emergencies</p>
               </div>
 
-              {(loading || fetchingLocation) && (
-                <div className="text-center mt-3">
-                  <div className="spinner-border text-danger" role="status">
-                    <span className="visually-hidden">{fetchingLocation ? 'Getting location...' : 'Creating alert...'}</span>
+              {error && (
+                <div className="alert alert-danger d-flex align-items-center gap-2 p-2 small mb-3">
+                  <AlertTriangle size={16} />
+                  {error}
+                </div>
+              )}
+
+              {fetchingLocation && (
+                <div className="alert alert-info d-flex align-items-center gap-2 p-2 small mb-3">
+                  <Loader2 size={16} className="animate-spin" />
+                  Acquiring precise location...
+                </div>
+              )}
+
+              {success && emergencyContacts ? (
+                <div className="text-center">
+                  <div className="alert alert-success p-3 mb-4">
+                    <div className="fw-bold mb-1">Alert Sent Successfully</div>
+                    <div className="small">Authorities have been notified of your location.</div>
                   </div>
-                  <p className="mt-2 text-muted">{fetchingLocation ? 'Getting your location...' : 'Creating emergency alert...'}</p>
+                  
+                  {personalContacts && personalContacts.length > 0 && (
+                    <>
+                      <h6 className="text-start text-muted text-uppercase small fw-bold mb-3">My Contacts</h6>
+                      <div className="d-grid gap-2 mb-4">
+                        {personalContacts.map((contact, idx) => (
+                          <button key={idx} onClick={() => makePhoneCall(contact.phone)} className="btn btn-outline-primary d-flex align-items-center justify-content-between p-3">
+                            <span className="d-flex align-items-center gap-2">
+                              <Phone size={18} /> 
+                              <span className="text-truncate" style={{maxWidth: '120px'}}>{contact.name}</span>
+                              {contact.relationship && <span className="badge bg-secondary text-body border">{contact.relationship}</span>}
+                            </span>
+                            <span className="fw-bold">{contact.phone}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  <h6 className="text-start text-muted text-uppercase small fw-bold mb-3">Emergency Contacts</h6>
+                  <div className="d-grid gap-2">
+                    <button onClick={() => makePhoneCall(emergencyContacts.police)} className="btn btn-outline-danger d-flex align-items-center justify-content-between p-3">
+                      <span className="d-flex align-items-center gap-2"><Phone size={18} /> Police</span>
+                      <span className="fw-bold">{emergencyContacts.police}</span>
+                    </button>
+                    <button onClick={() => makePhoneCall(emergencyContacts.womenHelpline)} className="btn btn-outline-danger d-flex align-items-center justify-content-between p-3">
+                      <span className="d-flex align-items-center gap-2"><Phone size={18} /> Women Helpline</span>
+                      <span className="fw-bold">{emergencyContacts.womenHelpline}</span>
+                    </button>
+                    <button onClick={() => makePhoneCall(emergencyContacts.ambulance)} className="btn btn-outline-danger d-flex align-items-center justify-content-between p-3">
+                      <span className="d-flex align-items-center gap-2"><Phone size={18} /> Ambulance</span>
+                      <span className="fw-bold">{emergencyContacts.ambulance}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="d-grid gap-3">
+                  <button
+                    onClick={() => createEmergency('harassment', 'critical')}
+                    disabled={loading || fetchingLocation}
+                    className="btn btn-danger p-3 d-flex align-items-center gap-3 text-start shadow-sm hover-scale"
+                  >
+                    <ShieldAlert size={24} />
+                    <div>
+                      <div className="fw-bold">Harassment / Threat</div>
+                      <div className="small opacity-75">Immediate police assistance</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => createEmergency('assault', 'critical')}
+                    disabled={loading || fetchingLocation}
+                    className="btn btn-danger p-3 d-flex align-items-center gap-3 text-start shadow-sm hover-scale"
+                  >
+                    <AlertTriangle size={24} />
+                    <div>
+                      <div className="fw-bold">Physical Assault</div>
+                      <div className="small opacity-75">Critical emergency response</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => createEmergency('stalking', 'high')}
+                    disabled={loading || fetchingLocation}
+                    className="btn btn-warning p-3 d-flex align-items-center gap-3 text-start shadow-sm hover-scale"
+                  >
+                    <Eye size={24} />
+                    <div>
+                      <div className="fw-bold">Stalking / Following</div>
+                      <div className="small opacity-75">Report suspicious activity</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => createEmergency('medical', 'high')}
+                    disabled={loading || fetchingLocation}
+                    className="btn btn-info text-white p-3 d-flex align-items-center gap-3 text-start shadow-sm hover-scale"
+                  >
+                    <HeartPulse size={24} />
+                    <div>
+                      <div className="fw-bold">Medical Emergency</div>
+                      <div className="small opacity-75">Ambulance required</div>
+                    </div>
+                  </button>
                 </div>
               )}
 
-              <hr />
-              <div className="text-muted small">
-                <strong>Quick Dial (No Alert):</strong>
-                <div className="d-flex gap-2 mt-2 flex-wrap">
-                  <Button size="sm" variant="outline-secondary" onClick={() => makePhoneCall('100')}>
-                    Police 100
-                  </Button>
-                  <Button size="sm" variant="outline-secondary" onClick={() => makePhoneCall('1091')}>
-                    Women 1091
-                  </Button>
-                  <Button size="sm" variant="outline-secondary" onClick={() => makePhoneCall('108')}>
-                    Ambulance 108
-                  </Button>
-                  <Button size="sm" variant="outline-secondary" onClick={() => makePhoneCall('112')}>
-                    Emergency 112
-                  </Button>
+              {!success && (
+                <div className="mt-4 pt-3 border-top">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="text-muted small fw-bold">Quick Dial</span>
+                  </div>
+                  <div className="d-flex gap-2 justify-content-between">
+                    <button onClick={() => makePhoneCall('100')} className="btn btn-sm btn-light flex-grow-1">Police 100</button>
+                    <button onClick={() => makePhoneCall('1091')} className="btn btn-sm btn-light flex-grow-1">Women 1091</button>
+                    <button onClick={() => makePhoneCall('108')} className="btn btn-sm btn-light flex-grow-1">Amb 108</button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
-        </Modal.Body>
-      </Modal>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

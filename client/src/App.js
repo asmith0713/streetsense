@@ -6,6 +6,7 @@ import AdminPanel from './pages/AdminPanel';
 import AuthPage from './pages/AuthPage'; 
 import ProfilePage from './pages/ProfilePage';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
+import { getCookie, removeCookie } from './utils/cookies';
 import './index.css';
 import './App.css';
 
@@ -14,20 +15,21 @@ function Navigation() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     // Check both token keys for backward compatibility
-    return !!(localStorage.getItem('token') || localStorage.getItem('streetsense_token'));
+    return !!(getCookie('token') || localStorage.getItem('token') || localStorage.getItem('streetsense_token'));
   });
   const [userEmail, setUserEmail] = useState(() => {
-    return localStorage.getItem('user_email') || '';
+    return getCookie('user_email') || localStorage.getItem('user_email') || '';
   });
   
   const isLanding = location.pathname === '/';
-  const isAuth = location.pathname === '/auth'; 
+  const isAuth = location.pathname === '/auth' || location.pathname === '/login' || location.pathname === '/signup'; 
+  const isMap = location.pathname === '/live' || location.pathname === '/map';
 
   // Check authentication status on mount and when storage changes
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('token') || localStorage.getItem('streetsense_token');
-      const email = localStorage.getItem('user_email');
+      const token = getCookie('token') || localStorage.getItem('token') || localStorage.getItem('streetsense_token');
+      const email = getCookie('user_email') || localStorage.getItem('user_email');
       setIsLoggedIn(!!token);
       setUserEmail(email || '');
     };
@@ -39,6 +41,7 @@ function Navigation() {
     window.addEventListener('storage', checkAuth);
     
     // Custom event for same-tab updates
+    window.dispatchEvent(new Event('authChange')); // Trigger once to sync
     window.addEventListener('authChange', checkAuth);
 
     return () => {
@@ -49,6 +52,10 @@ function Navigation() {
 
   const handleLogout = () => {
     // Clear all authentication tokens
+    removeCookie('token');
+    removeCookie('user_id');
+    removeCookie('user_email');
+    
     localStorage.removeItem('token');
     localStorage.removeItem('streetsense_token');
     localStorage.removeItem('user_id');
@@ -65,76 +72,78 @@ function Navigation() {
 
   if (isAuth) return null; 
 
+  // Styles for Transparent Header (All Pages)
+  const navStyle = {
+    backgroundColor: 'transparent',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1030,
+    border: 'none',
+    boxShadow: 'none'
+  };
+
+  // Text colors - always use theme variables for dark mode compatibility
+  // But user asked for black app name (in light mode context presumably)
+  // We will use var(--foreground) which is black in light mode and white in dark mode
+  const brandColor = 'var(--foreground)';
+  const logoColor = '#8b5cf6'; // Purple as requested
+  const togglerColor = 'var(--foreground)';
+
   return (
-    <nav className={`navbar navbar-expand-md ${isLanding ? 'navbar-landing fixed-top' : 'navbar-dark bg-primary shadow-sm'}`} 
-         style={isLanding ? { backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' } : {}}>
+    <nav className="navbar navbar-expand-md fixed-top" style={navStyle}>
       <div className="container-fluid px-3 px-md-4">
         <Link className="navbar-brand fw-bold d-flex align-items-center brand-logo" to="/" 
-              style={isLanding ? { color: '#111' } : {}}>
-          <i className="bi bi-map-fill me-2 brand-icon"></i>
+              style={{ color: brandColor }}>
+          <i className="bi bi-map-fill me-2 brand-icon" style={{ color: logoColor }}></i>
           <span className="brand-text">StreetSense</span>
         </Link>
-        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                style={isLanding ? { borderColor: '#ddd' } : {}}>
-          <span className="navbar-toggler-icon" style={isLanding ? { filter: 'invert(1)' } : {}}></span>
-        </button>
+        
+        <div className="d-flex align-items-center gap-2 order-md-last ms-auto ms-md-0">
+          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span className="navbar-toggler-icon"></span>
+          </button>
+        </div>
+
         <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav ms-auto align-items-center gap-3">
-            {isLanding && (
+          <ul className="navbar-nav ms-auto align-items-center gap-3 me-3">
+            <li className="nav-item">
+              <Link className="nav-link fw-semibold" to="/live" style={{ color: 'var(--foreground)' }}>Live Map</Link>
+            </li>
+            {isLoggedIn ? (
               <>
                 <li className="nav-item">
-                  <Link className="nav-link nav-link-landing" to="/live">Live Map</Link>
+                  <Link className="nav-link fw-semibold" to="/account" style={{ color: 'var(--foreground)' }}>
+                    <i className="bi bi-person-circle me-1"></i> Account
+                  </Link>
+                </li>
+                <li className="nav-item ms-md-2">
+                  <span className="navbar-text small me-2" style={{ color: 'var(--muted-foreground)' }}>
+                    {userEmail.split('@')[0]}
+                  </span>
                 </li>
                 <li className="nav-item">
-                  <Link to="/signup" className="btn-nav-signup">
+                  <button 
+                    onClick={handleLogout} 
+                    className="btn btn-sm fw-semibold px-3 btn-outline-dark"
+                  >
+                    <i className="bi bi-box-arrow-right"></i> Logout
+                  </button>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className="nav-item">
+                  <Link to="/signup" className="btn btn-primary btn-sm fw-semibold px-3 rounded-pill">
                     Sign Up
                   </Link>
                 </li>
                 <li className="nav-item">
-                  <Link to="/login" className="btn-nav-login">
+                  <Link to="/login" className="btn btn-outline-primary btn-sm fw-semibold px-3 rounded-pill">
                     Login
                   </Link>
                 </li>
-              </>
-            )}
-            {!isLanding && (
-              <>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/">Home</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="nav-link" to="/live">Live Map</Link>
-                </li>
-                {isLoggedIn && (
-                  <li className="nav-item">
-                    <Link className="nav-link" to="/account">
-                      <i className="bi bi-person-circle me-1"></i> Account
-                    </Link>
-                  </li>
-                )}
-                {isLoggedIn ? (
-                  <>
-                    <li className="nav-item ms-md-2">
-                      <span className="navbar-text text-white-50 small me-2">
-                        <i className="bi bi-person-circle"></i> {userEmail.split('@')[0]}
-                      </span>
-                    </li>
-                    <li className="nav-item">
-                      <button 
-                        onClick={handleLogout} 
-                        className="btn btn-outline-light btn-sm fw-semibold px-3"
-                      >
-                        <i className="bi bi-box-arrow-right"></i> Logout
-                      </button>
-                    </li>
-                  </>
-                ) : (
-                  <li className="nav-item ms-md-2">
-                    <Link to="/login" className="btn btn-light btn-sm fw-semibold text-primary px-3">
-                      <i className="bi bi-box-arrow-in-right"></i> Login
-                    </Link>
-                  </li>
-                )}
               </>
             )}
           </ul>
@@ -145,10 +154,13 @@ function Navigation() {
 }
 
 export default function App() {
+  const location = useLocation();
+  const isMapPage = ['/map', '/live', '/reports'].includes(location.pathname);
+
   return (
     <div className="app-container">
       <Navigation />
-      <main className="flex-grow-1 d-flex flex-column position-relative overflow-hidden">
+      <main className={`flex-grow-1 d-flex flex-column position-relative ${isMapPage ? 'overflow-hidden' : 'overflow-auto'}`}>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />

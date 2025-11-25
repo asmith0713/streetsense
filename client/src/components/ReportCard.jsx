@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import API from '../api';
 import { resolveImageUrl } from '../utils/imageHelper';
+import { ThumbsUp, ThumbsDown, Clock, Tag, Image as ImageIcon, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function ReportCard({ report, onUpdated }) {
   const [upvotes, setUpvotes] = useState(report.upvotes || 0);
@@ -50,67 +51,71 @@ export default function ReportCard({ report, onUpdated }) {
       verified: 'info',
       resolved: 'success'
     };
-    return <span className={`badge bg-${statusColors[status] || 'secondary'} text-uppercase`}>{status}</span>;
+    const color = statusColors[status] || 'secondary';
+    
+    return (
+      <span className={`badge bg-${color} text-uppercase d-flex align-items-center gap-1`} style={{fontSize: '0.7rem'}}>
+        {status === 'open' && <AlertTriangle size={10} />}
+        {status === 'verified' && <CheckCircle size={10} />}
+        {status}
+      </span>
+    );
   };
 
   const netVotes = upvotes - downvotes;
 
   return (
-    <div style={{ minWidth: 220, maxWidth: 300 }}>
+    <div style={{ minWidth: 240, maxWidth: 320 }}>
       <div className="d-flex justify-content-between align-items-start mb-2">
-        <strong style={{ fontSize: 15 }}>{report.title}</strong>
+        <strong className="text-truncate pe-2" style={{ fontSize: 15 }}>{report.title}</strong>
         {getStatusBadge()}
       </div>
+      
       {report.description && (
-        <div style={{ fontSize: 13, color: '#555', marginBottom: 8, lineHeight: 1.4 }}>{report.description}</div>
+        <div className="text-muted mb-2" style={{ fontSize: 13, lineHeight: 1.4 }}>
+          {report.description}
+        </div>
       )}
-      <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
-        <i className="bi bi-tag me-1"></i>
-        <span className="badge bg-light text-dark">{report.category}</span>
+      
+      <div className="d-flex align-items-center gap-1 text-muted mb-2" style={{ fontSize: 12 }}>
+        <Tag size={12} />
+        <span className="badge bg-secondary text-body border fw-normal">{report.category}</span>
       </div>
 
       {imageSrc && !imageError ? (
-        <div style={{ marginTop: 8 }}>
+        <div className="mb-3">
           <img 
             src={imageSrc} 
             alt="report" 
-            style={{ width: '100%', borderRadius: 6, marginTop: 6 }}
+            className="w-100 rounded object-fit-cover"
+            style={{ height: '140px' }}
             onError={(e) => {
               console.error('Failed to load image:', imageSrc);
-              console.error('Original photoUrl:', report.photoUrl);
               setImageError(true);
             }}
           />
         </div>
       ) : report.photoUrl && imageError ? (
-        <div style={{ 
-          marginTop: 8, 
-          padding: 10, 
-          background: '#f0f0f0', 
-          borderRadius: 6,
-          fontSize: 12,
-          color: '#666'
-        }}>
-          📷 Image unavailable
-          <div style={{ fontSize: 10, marginTop: 4 }}>
-            Path: {report.photoUrl}
-          </div>
+        <div className="mb-3 p-3 bg-secondary rounded text-center text-muted small">
+          <ImageIcon size={20} className="mb-1 opacity-50" />
+          <div>Image unavailable</div>
         </div>
       ) : null}
 
-      <div className="d-flex align-items-center gap-2 mt-3">
-        <div className="btn-group" role="group">
+      <div className="d-flex align-items-center justify-content-between mt-2">
+        <div className="btn-group shadow-sm" role="group">
           <button
             onClick={() => handleVote('up')}
             className={`btn btn-sm ${userVote === 'up' ? 'btn-primary' : 'btn-outline-primary'}`}
             disabled={voting}
-            title="Upvote this report"
+            title="Upvote"
+            style={{padding: '0.25rem 0.5rem'}}
           >
-            <i className="bi bi-hand-thumbs-up-fill"></i>
+            <ThumbsUp size={14} />
           </button>
           <button
-            className="btn btn-sm btn-outline-secondary disabled"
-            style={{ minWidth: '50px', fontWeight: 'bold' }}
+            className="btn btn-sm btn-light border disabled text-body fw-bold"
+            style={{ minWidth: '40px', padding: '0.25rem 0.5rem' }}
           >
             {netVotes}
           </button>
@@ -118,16 +123,17 @@ export default function ReportCard({ report, onUpdated }) {
             onClick={() => handleVote('down')}
             className={`btn btn-sm ${userVote === 'down' ? 'btn-danger' : 'btn-outline-danger'}`}
             disabled={voting}
-            title="Downvote this report"
+            title="Downvote"
+            style={{padding: '0.25rem 0.5rem'}}
           >
-            <i className="bi bi-hand-thumbs-down-fill"></i>
+            <ThumbsDown size={14} />
           </button>
         </div>
-      </div>
-
-      <div className="small text-muted mt-2">
-        <i className="bi bi-clock me-1"></i>
-        {new Date(report.timestamp).toLocaleDateString()}
+        
+        <div className="small text-muted d-flex align-items-center gap-1">
+          <Clock size={12} />
+          {new Date(report.timestamp).toLocaleDateString()}
+        </div>
       </div>
     </div>
   );

@@ -1,3 +1,128 @@
+:root {
+  --primary: #0b5cff;
+  --primary-dark: #0043c7;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f4ff;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f8f9fa;
+  --muted-foreground: #64748b;
+  --accent: #f59e0b;
+  --danger: #ef4444;
+  --success: #10b981;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --border: #e2e8f0;
+  --card: #ffffff;
+  --radius: 0.75rem;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+[data-theme="dark"] {
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #334155;
+  --muted-foreground: #94a3b8;
+  --accent: #fbbf24;
+  --danger: #f87171;
+  --success: #34d399;
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --border: #334155;
+  --card: #1e293b;
+  --glass-bg: rgba(15, 23, 42, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Dark mode overrides for Bootstrap */
+[data-theme="dark"] .bg-white {
+  background-color: var(--card) !important;
+}
+
+[data-theme="dark"] .text-muted {
+  color: var(--muted-foreground) !important;
+}
+
+[data-theme="dark"] .text-dark {
+  color: var(--foreground) !important;
+}
+
+.input-group-bg {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+[data-theme="dark"] .input-group-bg {
+  background-color: var(--secondary);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .input-group-text {
+  background-color: var(--secondary);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+  background-color: var(--secondary);
+  color: var(--foreground);
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .btn-light {
+  background-color: var(--secondary);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+[data-theme="dark"] .btn-light:hover {
+  background-color: var(--muted);
+}
+
+[data-theme="dark"] .dropdown-menu {
+  background-color: var(--card);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .dropdown-item {
+  color: var(--foreground);
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+  background-color: var(--secondary);
+}
+
+[data-theme="dark"] .modal-content {
+  background-color: var(--card);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .table {
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .btn-outline-dark {
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+
+[data-theme="dark"] .btn-outline-dark:hover {
+  background-color: var(--foreground);
+  color: var(--background);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -9,12 +134,13 @@ html {
 body, html, #root {
   height: 100%;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8f9fa;
+  background-color: var(--background);
+  color: var(--foreground);
   overflow-x: hidden;
 }
 
@@ -22,11 +148,114 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+/* Global Layout Utilities */
+.page-container {
+  min-height: 100vh;
+  padding-top: 80px;
+  padding-bottom: 2rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Ensure content is not hidden behind fixed header on non-map pages */
+.app-container > main:not(.overflow-hidden) {
+  padding-top: 60px;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-card {
+  background: var(--card);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-theme="dark"] .glass-card {
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Modern Form Elements */
+.input-modern {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background-color: var(--card);
+  color: var(--foreground);
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+[data-theme="dark"] .input-modern {
+  background-color: var(--secondary);
+}
+
+.input-modern:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(11, 92, 255, 0.1);
+}
+
+.btn-modern {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  gap: 0.5rem;
+}
+
+.btn-primary-modern {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(11, 92, 255, 0.2);
+}
+
+.btn-primary-modern:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 8px -1px rgba(11, 92, 255, 0.3);
+  color: white;
+}
+
+.btn-outline-modern {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+
+.btn-outline-modern:hover {
+  background: var(--secondary);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  overflow: hidden;
+  /* overflow: hidden; - Removed to allow scrolling on admin/profile pages */
 }
 
 .map-wrapper {
@@ -54,11 +283,32 @@ code {
   width: 100%;
   height: 100%;
   z-index: 1;
+  background: var(--background);
 }
+
+/* Dark mode map tiles */
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+/* Invert labels back if possible, but for standard OSM tiles it's hard. 
+   This filter usually looks decent for dark mode maps. */
 
 .leaflet-popup-content-wrapper {
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  background: var(--card);
+  color: var(--foreground);
+}
+
+/* Fix Leaflet popup content colors for dark mode */
+[data-theme="dark"] .leaflet-popup-content h3,
+[data-theme="dark"] .leaflet-popup-content strong {
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .leaflet-popup-content p {
+  color: var(--muted-foreground) !important;
 }
 
 .leaflet-popup-content {
@@ -67,6 +317,7 @@ code {
 }
 
 .leaflet-popup-tip {
+  background: var(--card);
   box-shadow: 0 3px 14px rgba(0,0,0,0.1);
 }
 
@@ -82,14 +333,14 @@ code {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--secondary);
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
+  background: var(--muted-foreground);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #a0aec0;
+  background: var(--primary);
 }
 
 .loading-overlay {
@@ -98,7 +349,7 @@ code {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--glass-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -118,4 +369,491 @@ code {
   to {
     transform: rotate(360deg);
   }
+}
+
+.bg-card {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+[data-theme="dark"] .bg-card {
+  background-color: var(--card);
+  border-color: var(--border);
+}
+
+/* Dark mode overrides for bg-light and bg-secondary */
+[data-theme="dark"] .bg-light {
+  background-color: var(--secondary) !important;
+}
+
+[data-theme="dark"] .bg-secondary {
+  background-color: var(--muted) !important;
+}
+
+/* Fix text-body to be adaptive */
+.text-body {
+  color: var(--foreground) !important;
+}
+
+/* Dark mode text color overrides for hardcoded colors in App.css */
+[data-theme="dark"] .section-title,
+[data-theme="dark"] .hero-title,
+[data-theme="dark"] .feature-heading,
+[data-theme="dark"] .stat-num,
+[data-theme="dark"] .testimonials-title,
+[data-theme="dark"] .faq-question,
+[data-theme="dark"] .features-title,
+[data-theme="dark"] .tech-title,
+[data-theme="dark"] .card-line.title {
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .hero-description,
+[data-theme="dark"] .feature-subheading,
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .feature-benefits li,
+[data-theme="dark"] .faq-answer,
+[data-theme="dark"] .faq-icon,
+[data-theme="dark"] .tech-item,
+[data-theme="dark"] .tech-description {
+  color: var(--muted-foreground) !important;
+}
+
+[data-theme="dark"] .brand-dark {
+  color: var(--foreground) !important;
+}
+
+/* ============================================
+   COMPREHENSIVE DARK MODE OVERRIDES
+   ============================================ */
+
+/* Placeholder text */
+[data-theme="dark"] ::placeholder {
+  color: var(--muted-foreground) !important;
+  opacity: 0.7;
+}
+
+[data-theme="dark"] ::-webkit-input-placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+[data-theme="dark"] ::-moz-placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+[data-theme="dark"] :-ms-input-placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* All button outline variants */
+[data-theme="dark"] .btn-outline-primary {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .btn-outline-primary:hover {
+  background-color: var(--primary);
+  color: white;
+}
+
+[data-theme="dark"] .btn-outline-secondary {
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover {
+  background-color: var(--secondary);
+  color: var(--foreground);
+}
+
+[data-theme="dark"] .btn-outline-success {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+[data-theme="dark"] .btn-outline-success:hover {
+  background-color: var(--success);
+  color: white;
+}
+
+[data-theme="dark"] .btn-outline-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+[data-theme="dark"] .btn-outline-danger:hover {
+  background-color: var(--danger);
+  color: white;
+}
+
+[data-theme="dark"] .btn-outline-warning {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+[data-theme="dark"] .btn-outline-warning:hover {
+  background-color: var(--accent);
+  color: #1a1a1a;
+}
+
+[data-theme="dark"] .btn-outline-info {
+  color: #38bdf8;
+  border-color: #38bdf8;
+}
+
+[data-theme="dark"] .btn-outline-info:hover {
+  background-color: #38bdf8;
+  color: white;
+}
+
+/* Select dropdowns with arrow */
+[data-theme="dark"] .form-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+/* Dropdown option styling */
+[data-theme="dark"] .form-select option {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
+/* Form labels */
+[data-theme="dark"] .form-label {
+  color: var(--muted-foreground);
+}
+
+/* Form check inputs (checkboxes/radios) */
+[data-theme="dark"] .form-check-input {
+  background-color: var(--secondary);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .form-check-input:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .form-check-label {
+  color: var(--foreground);
+}
+
+/* Textarea */
+[data-theme="dark"] textarea.form-control,
+[data-theme="dark"] textarea.input-modern {
+  background-color: var(--secondary);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+/* Input group addons */
+[data-theme="dark"] .input-group-text {
+  background-color: var(--secondary);
+  border-color: var(--border);
+  color: var(--muted-foreground);
+}
+
+/* Bootstrap alerts */
+[data-theme="dark"] .alert {
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .alert-info {
+  background-color: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+[data-theme="dark"] .alert-warning {
+  background-color: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+[data-theme="dark"] .alert-danger {
+  background-color: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+[data-theme="dark"] .alert-success {
+  background-color: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+/* Bootstrap cards */
+[data-theme="dark"] .card {
+  background-color: var(--card);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .card-footer {
+  background-color: var(--secondary);
+  border-color: var(--border);
+}
+
+/* Bootstrap badges */
+[data-theme="dark"] .badge {
+  color: var(--foreground);
+}
+
+[data-theme="dark"] .badge.bg-light {
+  background-color: var(--secondary) !important;
+  color: var(--foreground) !important;
+}
+
+/* Bootstrap borders */
+[data-theme="dark"] .border {
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .border-top,
+[data-theme="dark"] .border-bottom,
+[data-theme="dark"] .border-start,
+[data-theme="dark"] .border-end {
+  border-color: var(--border) !important;
+}
+
+[data-theme="dark"] .border-light {
+  border-color: var(--border) !important;
+}
+
+/* Close button */
+[data-theme="dark"] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Code blocks */
+[data-theme="dark"] code {
+  background-color: var(--muted);
+  color: var(--danger);
+}
+
+/* Links */
+[data-theme="dark"] a:not(.btn):not(.nav-link):not(.navbar-brand) {
+  color: var(--primary);
+}
+
+[data-theme="dark"] a:not(.btn):not(.nav-link):not(.navbar-brand):hover {
+  color: var(--primary-dark);
+}
+
+/* Table hover */
+[data-theme="dark"] .table-hover tbody tr:hover {
+  background-color: var(--secondary);
+}
+
+/* Form floating labels */
+[data-theme="dark"] .form-floating > label {
+  color: var(--muted-foreground);
+}
+
+/* Input disabled state */
+[data-theme="dark"] .form-control:disabled,
+[data-theme="dark"] .form-select:disabled {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+}
+
+/* ============================================
+   SMOOTH THEME TRANSITIONS
+   ============================================ */
+
+/* Smooth transition for theme changes */
+body,
+.glass-panel,
+.glass-card,
+.btn,
+.form-control,
+.form-select,
+.card,
+.navbar,
+.modal-content,
+.dropdown-menu {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Dark mode toggle button animation */
+.btn .bi-sun-fill,
+.btn .bi-moon-fill {
+  transition: transform 0.3s ease;
+}
+
+.btn:hover .bi-sun-fill,
+.btn:hover .bi-moon-fill {
+  transform: rotate(15deg) scale(1.1);
+}
+
+/* ============================================
+   EMERGENCY & BADGE STYLES
+   ============================================ */
+
+/* Emergency SOS Button */
+.emergency-sos-btn {
+  background-color: #ef4444 !important;
+  color: white !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5) !important;
+}
+
+[data-theme="dark"] .emergency-sos-btn {
+  background-color: #dc2626 !important;
+  box-shadow: 0 0 25px rgba(220, 38, 38, 0.6) !important;
+}
+
+.emergency-sos-btn:hover {
+  background-color: #dc2626 !important;
+  transform: scale(1.05);
+}
+
+[data-theme="dark"] .emergency-sos-btn:hover {
+  background-color: #b91c1c !important;
+}
+
+/* Badge text colors for proper contrast in dark mode */
+[data-theme="dark"] .badge.bg-warning {
+  color: #000000 !important;
+  background-color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .badge.bg-info {
+  color: #000000 !important;
+  background-color: #60a5fa !important;
+}
+
+[data-theme="dark"] .btn-warning {
+  color: #000000 !important;
+  background-color: #fbbf24 !important;
+  border-color: #fbbf24 !important;
+}
+
+[data-theme="dark"] .btn-warning:hover,
+[data-theme="dark"] .btn-warning:focus {
+  color: #000000 !important;
+  background-color: #f59e0b !important;
+  border-color: #f59e0b !important;
+}
+
+[data-theme="dark"] .btn-info {
+  color: #000000 !important;
+  background-color: #60a5fa !important;
+  border-color: #60a5fa !important;
+}
+
+[data-theme="dark"] .btn-info:hover,
+[data-theme="dark"] .btn-info:focus {
+  color: #000000 !important;
+  background-color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+}
+
+/* ============================================
+   MODAL & BACKDROP STYLES
+   ============================================ */
+
+/* Modal backdrops - use semi-transparent dark overlay */
+.modal-backdrop-dark {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .modal-backdrop-dark {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Lightbox backdrop */
+.lightbox-backdrop {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+}
+
+[data-theme="dark"] .lightbox-backdrop {
+  background-color: rgba(0, 0, 0, 0.95) !important;
+}
+
+/* Auth page background */
+.auth-page-bg {
+  background: radial-gradient(circle at 50% 50%, rgba(11, 92, 255, 0.05) 0%, transparent 50%);
+}
+
+[data-theme="dark"] .auth-page-bg {
+  background: radial-gradient(circle at 50% 50%, rgba(11, 92, 255, 0.15) 0%, transparent 50%);
+}
+
+/* Auth icon circle */
+.auth-icon-circle {
+  background: rgba(11, 92, 255, 0.1);
+}
+
+[data-theme="dark"] .auth-icon-circle {
+  background: rgba(11, 92, 255, 0.2);
+}
+
+/* ============================================
+   FORM ELEMENTS - ENHANCED DARK MODE
+   ============================================ */
+
+/* Input group backgrounds */
+[data-theme="dark"] .input-group-bg {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+/* Modern inputs */
+[data-theme="dark"] .input-modern {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .input-modern:focus {
+  border-color: var(--primary) !important;
+  background-color: var(--card) !important;
+}
+
+/* Button outline modern */
+[data-theme="dark"] .btn-outline-modern {
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+  background-color: transparent !important;
+}
+
+[data-theme="dark"] .btn-outline-modern:hover,
+[data-theme="dark"] .btn-outline-modern:focus {
+  color: var(--primary) !important;
+  background-color: var(--secondary) !important;
+  border-color: var(--primary) !important;
+}
+
+/* Glass panel enhanced */
+[data-theme="dark"] .glass-panel {
+  background-color: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+/* Ensure form labels are visible */
+[data-theme="dark"] .form-label {
+  color: var(--foreground) !important;
+}
+
+/* Select dropdowns */
+[data-theme="dark"] .form-select {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] .form-select:focus {
+  border-color: var(--primary) !important;
+  background-color: var(--card) !important;
+}
+
+/* Textarea elements */
+[data-theme="dark"] textarea.form-control {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+[data-theme="dark"] textarea.form-control:focus {
+  border-color: var(--primary) !important;
+  background-color: var(--card) !important;
 }

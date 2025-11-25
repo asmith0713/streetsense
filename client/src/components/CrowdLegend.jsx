@@ -1,49 +1,52 @@
 import React from 'react';
+import { Users, ShieldCheck, Info } from 'lucide-react';
 
 export default function CrowdLegend({ activeUserCount }) {
   return (
     <div 
-      className="position-absolute bottom-0 end-0 mb-5 me-3 bg-white rounded shadow-sm p-3 z-2"
-      style={{ maxWidth: '200px' }}
+      className="glass-panel p-3 position-absolute"
+      style={{ 
+        bottom: '100px', 
+        right: '20px', 
+        width: '220px',
+        zIndex: 1000 
+      }}
     >
-      <div className="d-flex align-items-center justify-content-between mb-2">
-        <h6 className="mb-0 fw-bold text-dark" style={{ fontSize: '0.85rem' }}>
-          <i className="bi bi-people-fill me-2 text-success"></i>
-          Safety Map
-        </h6>
+      <div className="d-flex align-items-center gap-2 mb-2">
+        <Users size={16} className="text-success" />
+        <h6 className="mb-0 fw-bold text-body small">Safety Map</h6>
       </div>
       
-      <div className="small text-muted mb-2">
+      <div className="small text-muted mb-2" style={{fontSize: '0.75rem'}}>
         Real-time crowd density
       </div>
 
-      <div className="d-flex align-items-center gap-2 mb-2">
-        <div className="d-flex flex-column gap-1 flex-grow-1">
-          <div className="d-flex align-items-center gap-2">
-            <div 
-              style={{
-                width: '30px',
-                height: '12px',
-                background: 'linear-gradient(to right, #0000ff, #00ff00, #ffff00, #ffa500, #00ff00)',
-                border: '1px solid #dee2e6',
-                borderRadius: '2px'
-              }}
-            />
-            <span className="small text-muted">More people</span>
+      <div className="d-flex align-items-center gap-2 mb-3">
+        <div className="w-100">
+          <div 
+            style={{
+              height: '8px',
+              background: 'linear-gradient(to right, rgba(0,0,255,0.3), rgba(0,255,0,0.5), rgba(255,255,0,0.7), rgba(255,165,0,0.9))',
+              borderRadius: '4px'
+            }}
+          />
+          <div className="d-flex justify-content-between mt-1 text-muted" style={{fontSize: '0.65rem'}}>
+            <span>Few</span>
+            <span>Many</span>
           </div>
         </div>
       </div>
 
       {activeUserCount !== undefined && activeUserCount !== null && (
-        <div className="alert alert-success py-2 px-2 mb-0 mt-2" style={{ fontSize: '0.8rem' }}>
-          <i className="bi bi-shield-check me-1"></i>
-          <strong>{activeUserCount}</strong> {activeUserCount === 1 ? 'person' : 'people'} nearby
+        <div className="d-flex align-items-center gap-2 p-2 rounded bg-success bg-opacity-10 text-success mb-2">
+          <ShieldCheck size={14} />
+          <span className="fw-bold small">{activeUserCount} {activeUserCount === 1 ? 'person' : 'people'} nearby</span>
         </div>
       )}
 
-      <div className="text-muted mt-2" style={{ fontSize: '0.7rem' }}>
-        <i className="bi bi-info-circle me-1"></i>
-        Green areas = More people = Safer
+      <div className="d-flex align-items-start gap-2 text-muted" style={{ fontSize: '0.7rem' }}>
+        <Info size={12} className="mt-1 flex-shrink-0" />
+        <span>Green/Yellow areas indicate more people, which may be safer.</span>
       </div>
     </div>
   );

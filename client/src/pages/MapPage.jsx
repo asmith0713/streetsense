@@ -1,7 +1,13 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, ZoomControl, Circle } from 'react-leaflet';
+// import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
-import API from '../api'; // Ensure this path is correct
+import API from '../api';
+import { 
+  MapPin, Flame, Layers, Users, Share2, Crosshair, Navigation, Plus, 
+  Filter, Clock, AlertTriangle, CheckCircle, Copy, MessageCircle, Smartphone
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Components
 import ReportFormModal from '../components/ReportFormModal';
@@ -15,7 +21,7 @@ import EmergencyButton from '../components/EmergencyButton';
 import LocationPermissionGuide from '../components/LocationPermissionGuide';
 
 // CSS / Leaflet Assets
-import 'leaflet/dist/leaflet.css'; // Ensure CSS is imported
+import 'leaflet/dist/leaflet.css';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -24,7 +30,6 @@ import { REFRESH_INTERVAL, USER_LOCATION_RADIUS, MAP_DEFAULT_ZOOM, MAP_TRACKING_
 
 // --- Configuration ---
 
-// Fix Leaflet default icon issue (Webpack/React specific)
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
@@ -32,7 +37,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow
 });
 
-// Custom user location icon (Blue Dot)
 const userLocationIcon = new L.Icon({
   iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjgiIGZpbGw9IiM0Mjg1RjQiIGZpbGwtb3BhY2l0eT0iMC4yIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjYiIGZpbGw9IiM0Mjg1RjQiLz4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cjwvc3ZnPg==',
   iconSize: [24, 24],
@@ -40,7 +44,6 @@ const userLocationIcon = new L.Icon({
   popupAnchor: [0, -12]
 });
 
-// Custom shared location icon (Orange/Red Pin Marker)
 const sharedLocationIcon = new L.Icon({
   iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCAzMiA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cGF0aCBkPSJNMTYgNDhDMTYgNDggMzIgMjguOCAzMiAxNkMzMiA3LjE2MzQ0IDI0LjgzNjYgMCAxNiAwQzcuMTYzNDQgMCAwIDcuMTYzNDQgMCAxNkMwIDI4LjggMTYgNDggMTYgNDhaIiBmaWxsPSIjRkY1NzIyIi8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iOCIgZmlsbD0id2hpdGUiLz4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI1IiBmaWxsPSIjRkY1NzIyIi8+Cjwvc3ZnPg==',
   iconSize: [32, 48],
@@ -50,7 +53,6 @@ const sharedLocationIcon = new L.Icon({
 
 // --- Helper Components ---
 
-// Handle Map Clicks
 function MapClick({ onClick }) {
   useMapEvents({
     click(e) {
@@ -60,7 +62,6 @@ function MapClick({ onClick }) {
   return null;
 }
 
-// Capture Map Instance for external control
 function MapInstanceSetter({ setMap }) {
   const map = useMap();
   useEffect(() => {
@@ -69,7 +70,6 @@ function MapInstanceSetter({ setMap }) {
   return null;
 }
 
-// Smoothly pan to user location
 function RecenterMap({ position, isTracking }) {
   const map = useMap();
   const prevPositionRef = useRef(null);
@@ -77,7 +77,6 @@ function RecenterMap({ position, isTracking }) {
   useEffect(() => {
     if (position && isTracking) {
       const currentPos = JSON.stringify(position);
-      // Only fly if position actually changed to avoid jitter
       if (prevPositionRef.current !== currentPos) {
         map.flyTo(position, MAP_TRACKING_ZOOM, {
           animate: true,
@@ -94,7 +93,7 @@ function RecenterMap({ position, isTracking }) {
 // --- Main Component ---
 
 export default function MapPage() {
-  // State
+  // const navigate = useNavigate();
   const [reports, setReports] = useState([]);
   const [heatPoints, setHeatPoints] = useState([]);
   const [crowdPoints, setCrowdPoints] = useState([]);
@@ -104,36 +103,33 @@ export default function MapPage() {
     localStorage.getItem('streetsense_crowd_heatmap') === 'true'
   );
   const [shareLocationEnabled, setShareLocationEnabled] = useState(
-    localStorage.getItem('streetsense_share_location') !== 'false' // Default to true
+    localStorage.getItem('streetsense_share_location') !== 'false'
   );
   
-  // Location State
-  const [pos, setPos] = useState([17.447, 78.396]); // Default center
+  const [pos, setPos] = useState([17.447, 78.396]);
   const [userLocation, setUserLocation] = useState(null);
-  const [sharedLocation, setSharedLocation] = useState(null); // Location from tracking link
+  const [sharedLocation, setSharedLocation] = useState(null);
   const [trackingLocation, setTrackingLocation] = useState(
     localStorage.getItem('streetsense_tracking') === 'true'
   );
   const [locationError, setLocationError] = useState(null);
   const [showLocationGuide, setShowLocationGuide] = useState(false);
   
-  // Interaction State
   const [formLatLng, setFormLatLng] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [timeFilter, setTimeFilter] = useState('7d');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('pins'); // 'pins' | 'heat' | 'cluster'
+  const [mode, setMode] = useState('pins');
   const [mapInstance, setMapInstance] = useState(null);
   const [showShareToast, setShowShareToast] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   
-  // Refs
-  const [autoRefresh] = useState(true); // Default to true for live apps
+  const [autoRefresh] = useState(true);
   const refreshTimerRef = useRef(null);
   const watchIdRef = useRef(null);
   const shareMenuRef = useRef(null);
 
-  // Helper: Get timestamp for API
   const getTimeDate = (filter) => {
     const now = new Date();
     switch(filter) {
@@ -144,7 +140,6 @@ export default function MapPage() {
     }
   };
 
-  // 1. Data Loading
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -155,19 +150,15 @@ export default function MapPage() {
         if(dateStr) params.append('since', dateStr);
       }
       
-      // Fetch Reports
       const reportRes = await API.get(`/reports?${params.toString()}`);
       const features = reportRes.data.features || [];
       
-      // Process GeoJSON [Lng, Lat] -> Leaflet [Lat, Lng]
       setReports(features.map(f => ({
         ...f.properties,
-        _id: f._id || f.properties?._id || f.id, // Handle different ID formats (GeoJSON structure)
-        // Ensure we handle GeoJSON [lng, lat] correctly
+        _id: f._id || f.properties?._id || f.id,
         coords: f.geometry?.coordinates ? f.geometry.coordinates : [78.396, 17.447]
       })));
 
-      // Fetch Heatmap if in heat mode (optimization)
       if (mode === 'heat') {
         const heatRes = await API.get(`/reports/heat?${params.toString()}`);
         setHeatPoints(heatRes.data.points || []);
@@ -180,10 +171,8 @@ export default function MapPage() {
     }
   }, [categoryFilter, timeFilter, mode]);
 
-  // Fetch crowd heatmap data
   const fetchCrowdData = useCallback(async () => {
     if (!showCrowdHeatmap) return;
-    
     try {
       const res = await API.get('/locations/heatmap');
       setCrowdPoints(res.data.points || []);
@@ -193,10 +182,8 @@ export default function MapPage() {
     }
   }, [showCrowdHeatmap]);
 
-  // Update user's location to server (for crowd heatmap)
   const updateUserLocation = useCallback(async (lat, lng, accuracy = 100) => {
     if (!shareLocationEnabled) return;
-    
     try {
       await API.post('/locations', { lat, lng, accuracy });
     } catch (err) {
@@ -204,20 +191,16 @@ export default function MapPage() {
     }
   }, [shareLocationEnabled]);
 
-  // 2. Effect: Initial Load & Refresh Interval
   useEffect(() => {
     fetchData();
-
     if (autoRefresh) {
       refreshTimerRef.current = setInterval(fetchData, REFRESH_INTERVAL);
     }
-
     return () => {
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
     };
   }, [fetchData, autoRefresh]);
 
-  // 2b. Effect: Handle shared location from URL parameters (TRACKING LINK FEATURE)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const lat = parseFloat(params.get('lat'));
@@ -227,7 +210,7 @@ export default function MapPage() {
     if (!isNaN(lat) && !isNaN(lng)) {
       const sharedLocation = [lat, lng];
       setPos(sharedLocation);
-      setSharedLocation(sharedLocation); // Store shared location for marker
+      setSharedLocation(sharedLocation);
       
       if (mapInstance) {
         setTimeout(() => {
@@ -238,18 +221,16 @@ export default function MapPage() {
         }, 500);
       }
     }
-  }, [mapInstance]); // Effect runs when map loads, enabling tracking links to work
+  }, [mapInstance]);
 
-  // 2c. Effect: Fetch crowd data when crowd heatmap is enabled
   useEffect(() => {
     if (showCrowdHeatmap) {
       fetchCrowdData();
-      const crowdInterval = setInterval(fetchCrowdData, 10000); // Update every 10 seconds
+      const crowdInterval = setInterval(fetchCrowdData, 10000);
       return () => clearInterval(crowdInterval);
     }
   }, [showCrowdHeatmap, fetchCrowdData]);
 
-  // 2d. Effect: Update user location to server when tracking and sharing enabled
   useEffect(() => {
     if (userLocation && shareLocationEnabled) {
       const [lat, lng] = userLocation;
@@ -257,23 +238,19 @@ export default function MapPage() {
     }
   }, [userLocation, shareLocationEnabled, updateUserLocation]);
 
-  // 2e. Effect: Auto-start location tracking on mount for persistent safety tracking
   useEffect(() => {
-    // Always enable location sharing by default for women's safety
     if (!shareLocationEnabled) {
       setShareLocationEnabled(true);
       localStorage.setItem('streetsense_share_location', 'true');
     }
 
-    // Auto-request location immediately on app load
     if (!userLocation && !watchIdRef.current) {
       const timer = setTimeout(() => {
         requestInitialLocation();
-      }, 500); // Small delay to ensure component is mounted
+      }, 500);
       return () => clearTimeout(timer);
     }
 
-    // Auto-start tracking if it was previously enabled
     if (trackingLocation && !watchIdRef.current && userLocation) {
       const timer = setTimeout(() => {
         startTracking();
@@ -281,7 +258,7 @@ export default function MapPage() {
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount - intentionally ignoring deps for initialization
+  }, []);
 
   const requestInitialLocation = () => {
     if (!navigator.geolocation) {
@@ -295,16 +272,13 @@ export default function MapPage() {
         const newPos = [latitude, longitude];
         setUserLocation(newPos);
         setPos(newPos);
-        console.log('Initial location acquired:', newPos);
         
-        // Optionally start tracking automatically
         if (localStorage.getItem('streetsense_tracking') === 'true') {
           startTracking();
         }
       },
       (error) => {
         console.warn('Initial location request failed:', error.message);
-        // Don't show error to user, just silently fail
       },
       {
         enableHighAccuracy: true,
@@ -314,14 +288,12 @@ export default function MapPage() {
     );
   };
 
-  // 3. Effect: Cleanup Location Tracking on Unmount
   useEffect(() => {
     return () => {
       if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     };
   }, []);
 
-  // 3b. Effect: Close share menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (shareMenuRef.current && !shareMenuRef.current.contains(event.target)) {
@@ -335,7 +307,6 @@ export default function MapPage() {
     }
   }, [showShareMenu]);
 
-  // Location Logic
   const getLocationErrorMessage = (code) => {
     switch (code) {
       case 1: return 'Location permission denied. Click "Help" button for instructions.';
@@ -346,15 +317,12 @@ export default function MapPage() {
   };
 
   const handleLocationSuccess = useCallback((position) => {
-    const { latitude, longitude, accuracy } = position.coords;
+    const { latitude, longitude } = position.coords;
     const newPos = [latitude, longitude];
     
     setUserLocation(newPos);
     setLocationError(null);
     
-    console.log(`Location updated: [${latitude.toFixed(6)}, ${longitude.toFixed(6)}] (accuracy: ${accuracy.toFixed(0)}m)`);
-    
-    // Update center position if tracking is active
     if (trackingLocation) {
       setPos(newPos);
     }
@@ -365,7 +333,6 @@ export default function MapPage() {
     const errorMsg = getLocationErrorMessage(error.code);
     setLocationError(errorMsg);
     
-    // Stop tracking on error
     if (trackingLocation) {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -381,21 +348,18 @@ export default function MapPage() {
       return;
     }
     
-    // Check if HTTPS or localhost (required for geolocation on mobile)
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
       setLocationError('Geolocation requires HTTPS connection on mobile devices');
       return;
     }
     
-    // Clear any previous errors
     setLocationError(null);
     
-    // Mobile-optimized geolocation settings
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const geoOptions = {
-      enableHighAccuracy: isMobile, // High accuracy important for mobile
-      timeout: 15000, // Longer timeout for mobile
-      maximumAge: isMobile ? 10000 : 5000 // Cache longer on mobile to reduce battery drain
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: isMobile ? 10000 : 5000
     };
     
     navigator.geolocation.getCurrentPosition(
@@ -405,7 +369,6 @@ export default function MapPage() {
         setUserLocation(newPos);
         setLocationError(null);
         
-        // Fly to location immediately on button click
         if (mapInstance) {
           mapInstance.flyTo(newPos, MAP_TRACKING_ZOOM, {
             animate: true,
@@ -424,24 +387,20 @@ export default function MapPage() {
       return;
     }
     
-    // Check if HTTPS or localhost
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
       setLocationError('Geolocation requires HTTPS connection on mobile devices');
       return;
     }
     
-    // Clear any previous errors
     setLocationError(null);
     
-    // Mobile-optimized settings
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const geoOptions = {
       enableHighAccuracy: true,
       timeout: 15000,
-      maximumAge: isMobile ? 5000 : 0 // Small cache on mobile for battery
+      maximumAge: isMobile ? 5000 : 0
     };
     
-    // Get initial position first
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -450,7 +409,6 @@ export default function MapPage() {
         setTrackingLocation(true);
         localStorage.setItem('streetsense_tracking', 'true');
         
-        // Fly to location
         if (mapInstance) {
           mapInstance.flyTo(newPos, MAP_TRACKING_ZOOM, {
             animate: true,
@@ -458,14 +416,11 @@ export default function MapPage() {
           });
         }
         
-        // Start watching position
         watchIdRef.current = navigator.geolocation.watchPosition(
           handleLocationSuccess,
           handleLocationError,
           geoOptions
         );
-        
-        console.log('Live tracking started (persistent)');
       },
       handleLocationError,
       geoOptions
@@ -474,21 +429,17 @@ export default function MapPage() {
 
   const toggleTracking = () => {
     if (trackingLocation) {
-      // Stop tracking
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
       setTrackingLocation(false);
       localStorage.setItem('streetsense_tracking', 'false');
-      console.log('Live tracking stopped');
     } else {
-      // Start tracking
       startTracking();
     }
   };
 
-  // Share Location
   const copyToClipboard = async (shareUrl) => {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -497,8 +448,7 @@ export default function MapPage() {
       setTimeout(() => setShowShareToast(false), 3000);
       return true;
     } catch (err) {
-      console.error('Clipboard write failed:', err);
-      // Fallback for older browsers
+      // Fallback
       try {
         const textArea = document.createElement('textarea');
         textArea.value = shareUrl;
@@ -519,7 +469,6 @@ export default function MapPage() {
         }
         return false;
       } catch (err2) {
-        console.error('Fallback clipboard failed:', err2);
         return false;
       }
     }
@@ -534,7 +483,6 @@ export default function MapPage() {
 
   const shareViaSMS = (shareUrl, lat, lng) => {
     const message = `Check out my location on StreetSense: ${lat.toFixed(6)}, ${lng.toFixed(6)} - ${shareUrl}`;
-    // Use different format for better compatibility across iOS and Android
     const smsUrl = `sms:?&body=${encodeURIComponent(message)}`;
     window.location.href = smsUrl;
     setShowShareMenu(false);
@@ -546,7 +494,6 @@ export default function MapPage() {
       return;
     }
 
-    // Try native share API first on mobile devices
     if (navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
       const [lat, lng] = userLocation;
       const shareUrl = `${window.location.origin}/map?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&zoom=${MAP_TRACKING_ZOOM}`;
@@ -559,25 +506,21 @@ export default function MapPage() {
         });
         return;
       } catch (err) {
-        // User cancelled or share failed, show menu as fallback
         if (err.name !== 'AbortError') {
           console.error('Native share failed:', err);
         }
       }
     }
     
-    // Show share menu for desktop or if native share failed
     setShowShareMenu(!showShareMenu);
   };
 
-  // Memoize the share URL to avoid recalculation
   const shareUrl = useMemo(() => {
     if (!userLocation) return null;
     const [lat, lng] = userLocation;
     return `${window.location.origin}/map?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&zoom=${MAP_TRACKING_ZOOM}`;
   }, [userLocation]);
 
-  // Form Handlers
   const handleMapClick = (latlng) => {
     setFormLatLng([latlng.lat, latlng.lng]);
     setShowForm(true);
@@ -591,7 +534,7 @@ export default function MapPage() {
       });
       
       await API.post('/reports', form);
-      await fetchData(); // Reload data
+      await fetchData();
       setShowForm(false);
     } catch (err) {
       console.error('Submit error:', err);
@@ -600,18 +543,32 @@ export default function MapPage() {
   };
 
   return (
-    <div className="d-flex flex-column h-100 w-100 position-relative">
+    <div className="d-flex flex-column h-100 w-100 position-relative overflow-hidden">
       
       {/* --- TOP CONTROLS --- */}
-      <div className="position-absolute top-0 start-0 end-0 p-3 z-3 pointer-events-none">
-        <div className="card shadow-sm border-0 mx-auto pointer-events-auto" style={{maxWidth: '850px'}}>
-          <div className="card-body p-2 d-flex gap-2 flex-wrap align-items-center justify-content-between">
-            
-            {/* Filters */}
-            <div className="d-flex gap-2 flex-grow-1 flex-wrap">
+      <div className="position-absolute top-0 start-0 end-0 p-3 z-3 pointer-events-none" style={{ marginTop: '60px' }}>
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="glass-panel mx-auto pointer-events-auto p-2 d-flex gap-2 flex-wrap align-items-center justify-content-between shadow-lg" 
+          style={{maxWidth: '900px'}}
+        >
+          {/* Mobile Toggle for Filters */}
+          <div className="d-flex gap-2">
+            <button 
+              className="btn btn-light d-md-none"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter size={18} />
+            </button>
+          </div>
+
+          {/* Filters */}
+          <div className={`d-none d-md-flex gap-2 flex-grow-1 flex-wrap align-items-center ${showFilters ? 'd-flex w-100 mt-2 order-last' : ''}`}>
+            <div className="input-group input-group-sm" style={{maxWidth: '180px'}}>
+              <span className="input-group-text input-group-bg border-end-0"><Filter size={14} /></span>
               <select 
-                className="form-select form-select-sm shadow-none border-secondary-subtle" 
-                style={{maxWidth: '140px'}} 
+                className="form-select border-start-0 shadow-none" 
                 value={categoryFilter} 
                 onChange={e => setCategoryFilter(e.target.value)}
               >
@@ -624,10 +581,12 @@ export default function MapPage() {
                 <option value="stray">Stray Animals</option>
                 <option value="other">Other</option>
               </select>
-              
+            </div>
+            
+            <div className="input-group input-group-sm" style={{maxWidth: '150px'}}>
+              <span className="input-group-text input-group-bg border-end-0"><Clock size={14} /></span>
               <select 
-                className="form-select form-select-sm shadow-none border-secondary-subtle" 
-                style={{maxWidth: '120px'}} 
+                className="form-select border-start-0 shadow-none"  
                 value={timeFilter} 
                 onChange={e => setTimeFilter(e.target.value)}
               >
@@ -636,223 +595,219 @@ export default function MapPage() {
                 <option value="30d">Last 30 Days</option>
                 <option value="all">All Time</option>
               </select>
-
-              {loading && <div className="spinner-border spinner-border-sm text-primary my-auto" role="status"></div>}
             </div>
 
-            {/* Mode Toggles */}
-            <div className="d-flex gap-2 align-items-center flex-wrap">
-              <div className="btn-group btn-group-sm">
-                <button className={`btn btn-outline-primary ${mode === 'pins' ? 'active' : ''}`} onClick={() => setMode('pins')}>
-                  <i className="bi bi-pin-map"></i> Pins
-                </button>
-                <button className={`btn btn-outline-primary ${mode === 'heat' ? 'active' : ''}`} onClick={() => setMode('heat')}>
-                  <i className="bi bi-fire"></i> Heat
-                </button>
-                <button className={`btn btn-outline-primary ${mode === 'cluster' ? 'active' : ''}`} onClick={() => setMode('cluster')}>
-                  <i className="bi bi-circle-fill"></i> Cluster
-                </button>
-              </div>
-              
-              {/* Safety Crowd Heatmap Toggle */}
-              <button 
-                className={`btn btn-sm ${showCrowdHeatmap ? 'btn-success' : 'btn-outline-success'}`}
-                onClick={() => {
-                  const newValue = !showCrowdHeatmap;
-                  setShowCrowdHeatmap(newValue);
-                  localStorage.setItem('streetsense_crowd_heatmap', newValue.toString());
-                }}
-                title="Show crowd density heatmap - see where more people are for safety awareness"
-              >
-                <i className="bi bi-people-fill"></i> {showCrowdHeatmap ? 'Hide' : 'Show'} Safety Map
-              </button>
-              
-              {/* Share Location Broadcasting - Sends location to crowd map */}
-              <button 
-                className={`btn btn-sm ${shareLocationEnabled ? 'btn-info' : 'btn-outline-info'} position-relative`}
-                onClick={() => {
-                  const newValue = !shareLocationEnabled;
-                  setShareLocationEnabled(newValue);
-                  localStorage.setItem('streetsense_share_location', newValue.toString());
-                  
-                  if (newValue && userLocation) {
-                    // Immediately update location when enabling
-                    const [lat, lng] = userLocation;
-                    updateUserLocation(lat, lng);
-                  }
-                }}
-                title={shareLocationEnabled 
-                  ? "Your location is being shared on the safety map - helping others see safe crowded areas" 
-                  : "Click to share your location on the safety map - helps create safer community awareness"}
-              >
-                <i className={`bi ${shareLocationEnabled ? 'bi-broadcast' : 'bi-broadcast-pin'}`}></i>
-                {' '}{shareLocationEnabled ? 'Broadcasting' : 'Start Broadcasting'}
-                {shareLocationEnabled && (
-                  <span className="position-absolute top-0 start-100 translate-middle p-1">
-                    <span className="position-relative d-flex h-100 w-100">
-                      <span className="animate-ping position-absolute d-inline-flex h-100 w-100 rounded-circle bg-success opacity-75"></span>
-                      <span className="position-relative d-inline-flex rounded-circle h-100 w-100 bg-success" style={{width: '8px', height: '8px'}}></span>
-                    </span>
-                  </span>
-                )}
-              </button>
-            </div>
+            {loading && <div className="spinner-border spinner-border-sm text-primary" role="status"></div>}
           </div>
-        </div>
+
+          {/* Mode Toggles */}
+          <div className="d-flex gap-2 align-items-center flex-wrap ms-auto">
+            <div className="btn-group btn-group-sm shadow-sm">
+              <button className={`btn ${mode === 'pins' ? 'btn-primary' : 'btn-light'}`} onClick={() => setMode('pins')}>
+                <MapPin size={14} className="me-1" /> Pins
+              </button>
+              <button className={`btn ${mode === 'heat' ? 'btn-primary' : 'btn-light'}`} onClick={() => setMode('heat')}>
+                <Flame size={14} className="me-1" /> Heat
+              </button>
+              <button className={`btn ${mode === 'cluster' ? 'btn-primary' : 'btn-light'}`} onClick={() => setMode('cluster')}>
+                <Layers size={14} className="me-1" /> Cluster
+              </button>
+            </div>
+            
+            <button 
+              className={`btn btn-sm d-flex align-items-center gap-1 ${showCrowdHeatmap ? 'btn-success text-white' : 'btn-outline-success'}`}
+              onClick={() => {
+                const newValue = !showCrowdHeatmap;
+                setShowCrowdHeatmap(newValue);
+                localStorage.setItem('streetsense_crowd_heatmap', newValue.toString());
+              }}
+            >
+              <Users size={14} />
+              <span className="d-none d-sm-inline">{showCrowdHeatmap ? 'Hide' : 'Show'} Crowd</span>
+            </button>
+            
+            <button 
+              className={`btn btn-sm d-flex align-items-center gap-1 position-relative ${shareLocationEnabled ? 'btn-info text-white' : 'btn-outline-info'}`}
+              onClick={() => {
+                const newValue = !shareLocationEnabled;
+                setShareLocationEnabled(newValue);
+                localStorage.setItem('streetsense_share_location', newValue.toString());
+                if (newValue && userLocation) {
+                  const [lat, lng] = userLocation;
+                  updateUserLocation(lat, lng);
+                }
+              }}
+            >
+              <Share2 size={14} />
+              <span className="d-none d-sm-inline">{shareLocationEnabled ? 'Broadcasting' : 'Broadcast'}</span>
+              {shareLocationEnabled && (
+                <span className="position-absolute top-0 start-100 translate-middle p-1">
+                  <span className="position-relative d-flex h-100 w-100">
+                    <span className="animate-ping position-absolute d-inline-flex h-100 w-100 rounded-circle bg-success opacity-75"></span>
+                    <span className="position-relative d-inline-flex rounded-circle h-100 w-100 bg-success" style={{width: '8px', height: '8px'}}></span>
+                  </span>
+                </span>
+              )}
+            </button>
+          </div>
+        </motion.div>
       </div>
 
       {/* --- ERROR TOAST --- */}
-      {locationError && (
-        <div className="position-absolute top-0 start-50 translate-middle-x mt-5 z-3 pointer-events-auto">
-          <div className="alert alert-warning alert-dismissible fade show shadow-sm py-2" role="alert">
-            <i className="bi bi-exclamation-triangle-fill me-2"></i> {locationError}
-            <button 
-              type="button" 
-              className="btn btn-sm btn-warning ms-2"
-              onClick={() => setShowLocationGuide(true)}
-              style={{marginRight: '30px'}}
-            >
-              Help
-            </button>
-            <button type="button" className="btn-close py-2" onClick={() => setLocationError(null)}></button>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {locationError && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="position-absolute top-0 start-50 translate-middle-x mt-5 z-3 pointer-events-auto"
+          >
+            <div className="glass-panel p-3 d-flex align-items-center gap-3 text-danger border-danger bg-danger bg-opacity-10">
+              <AlertTriangle size={20} />
+              <span className="small fw-bold">{locationError}</span>
+              <button className="btn btn-sm btn-light ms-2" onClick={() => setShowLocationGuide(true)}>Help</button>
+              <button className="btn-close small" onClick={() => setLocationError(null)}></button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* --- LOCATION PERMISSION GUIDE MODAL --- */}
-      <LocationPermissionGuide 
-        show={showLocationGuide} 
-        onClose={() => setShowLocationGuide(false)} 
-      />
+      <LocationPermissionGuide show={showLocationGuide} onClose={() => setShowLocationGuide(false)} />
 
       {/* --- LOCATION BROADCASTING INFO --- */}
-      {shareLocationEnabled && userLocation && (
-        <div className="position-fixed bottom-0 start-0 m-3 z-3 pointer-events-auto" style={{maxWidth: '320px'}}>
-          <div className="alert alert-success alert-dismissible fade show shadow-sm mb-0 py-2 px-3" role="alert">
-            <button type="button" className="btn-close" onClick={() => {
-              setShareLocationEnabled(false);
-              localStorage.setItem('streetsense_share_location', 'false');
-            }}></button>
-            <div className="d-flex align-items-start">
-              <i className="bi bi-broadcast-pin me-2 fs-5 mt-1"></i>
-              <div className="small">
-                <strong>Broadcasting Location</strong>
-                <br />
-                <small className="text-muted">Your location is visible on the Safety Map, helping others identify safer, more populated areas.</small>
+      <AnimatePresence>
+        {shareLocationEnabled && userLocation && (
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="position-fixed bottom-0 start-0 m-3 z-3 pointer-events-auto" 
+            style={{maxWidth: '300px'}}
+          >
+            <div className="glass-panel p-3 border-success bg-success bg-opacity-10 position-relative">
+              <button className="btn-close position-absolute top-0 end-0 m-2 small" onClick={() => {
+                setShareLocationEnabled(false);
+                localStorage.setItem('streetsense_share_location', 'false');
+              }}></button>
+              <div className="d-flex align-items-start gap-2">
+                <div className="bg-success text-white rounded-circle p-1 mt-1">
+                  <Share2 size={14} />
+                </div>
+                <div>
+                  <div className="fw-bold text-success small">Broadcasting Location</div>
+                  <div className="text-muted small" style={{fontSize: '0.75rem'}}>
+                    Your location is visible on the Safety Map to help others.
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- SHARE LINK SUCCESS TOAST --- */}
-      {showShareToast && (
-        <div className="position-absolute top-0 start-50 translate-middle-x mt-5 z-3 pointer-events-auto">
-          <div className="alert alert-success alert-dismissible fade show shadow-sm py-2" role="alert">
-            <i className="bi bi-check-circle-fill me-2"></i> Location link copied! Share it with others.
-            <button type="button" className="btn-close py-2" onClick={() => setShowShareToast(false)}></button>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {showShareToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="position-absolute top-0 start-50 translate-middle-x mt-5 z-3 pointer-events-auto"
+          >
+            <div className="glass-panel p-3 d-flex align-items-center gap-2 text-success border-success bg-success bg-opacity-10">
+              <CheckCircle size={18} />
+              <span className="fw-bold small">Link copied to clipboard!</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- BOTTOM LEFT CONTROLS --- */}
       <div className="position-absolute bottom-0 start-0 mb-4 ms-3 z-3 d-flex flex-column gap-2 pointer-events-none">
         <div className="pointer-events-auto d-flex flex-column gap-2">
-          {/* My Location */}
-          <button
-            className="btn btn-light rounded-circle shadow d-flex align-items-center justify-content-center border-0"
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="btn glass-panel p-0 rounded-circle d-flex align-items-center justify-content-center text-primary"
             style={{width: '48px', height: '48px'}}
             onClick={getUserLocation}
             title="Find Me"
           >
-            <i className="bi bi-crosshair fs-5 text-dark"></i>
-          </button>
+            <Crosshair size={24} />
+          </motion.button>
 
-          {/* Live Tracking */}
-          <button
-            className={`btn ${trackingLocation ? 'btn-primary' : 'btn-light'} rounded-circle shadow d-flex align-items-center justify-content-center border-0`}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className={`btn glass-panel p-0 rounded-circle d-flex align-items-center justify-content-center ${trackingLocation ? 'bg-primary text-white border-primary' : 'text-primary'}`}
             style={{width: '48px', height: '48px'}}
             onClick={toggleTracking}
             title={trackingLocation ? "Stop tracking" : "Start live tracking"}
           >
-            <i className={`bi ${trackingLocation ? 'bi-geo-alt-fill' : 'bi-geo-alt'} fs-5`}></i>
-          </button>
+            <Navigation size={24} className={trackingLocation ? 'fill-current' : ''} />
+          </motion.button>
 
-          {/* Share Location Link */}
           {userLocation && (
             <div className="position-relative" ref={shareMenuRef}>
-              <button
-                className="btn btn-light rounded-circle shadow d-flex align-items-center justify-content-center border-0"
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="btn glass-panel p-0 rounded-circle d-flex align-items-center justify-content-center text-body"
                 style={{width: '48px', height: '48px'}}
                 onClick={shareLocation}
-                title="Share location link - copy URL to share with others"
+                title="Share location"
               >
-                <i className="bi bi-share fs-5 text-dark"></i>
-              </button>
+                <Share2 size={20} />
+              </motion.button>
 
-              {/* Share Menu Dropdown */}
-              {showShareMenu && shareUrl && (
-                <div 
-                  className="position-absolute start-100 bottom-0 ms-2 bg-white rounded-3 shadow-lg border"
-                  style={{
-                    minWidth: '220px',
-                    zIndex: 1050
-                  }}
-                >
-                  <div className="p-2">
-                    <div className="text-muted small fw-semibold px-2 py-1 mb-1">
-                      Share Location
-                    </div>
+              <AnimatePresence>
+                {showShareMenu && shareUrl && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9, originY: 1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="position-absolute start-100 bottom-0 ms-2 glass-panel p-2"
+                    style={{ minWidth: '200px', zIndex: 1050 }}
+                  >
+                    <div className="text-muted small fw-bold px-2 py-1 mb-1 text-uppercase">Share Location</div>
                     
-                    <button
-                      className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2 mb-1"
-                      onClick={() => copyToClipboard(shareUrl)}
-                    >
-                      <i className="bi bi-clipboard text-primary"></i>
-                      <span>Copy Link</span>
+                    <button className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2 mb-1" onClick={() => copyToClipboard(shareUrl)}>
+                      <Copy size={14} className="text-primary" /> Copy Link
                     </button>
 
-                    <button
-                      className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2 mb-1"
-                      onClick={() => {
-                        const [lat, lng] = userLocation;
-                        shareViaWhatsApp(shareUrl, lat, lng);
-                      }}
-                    >
-                      <i className="bi bi-whatsapp text-success"></i>
-                      <span>Share via WhatsApp</span>
+                    <button className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2 mb-1" onClick={() => { const [lat, lng] = userLocation; shareViaWhatsApp(shareUrl, lat, lng); }}>
+                      <MessageCircle size={14} className="text-success" /> WhatsApp
                     </button>
 
-                    <button
-                      className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2"
-                      onClick={() => {
-                        const [lat, lng] = userLocation;
-                        shareViaSMS(shareUrl, lat, lng);
-                      }}
-                    >
-                      <i className="bi bi-chat-text text-info"></i>
-                      <span>Share via SMS</span>
+                    <button className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2" onClick={() => { const [lat, lng] = userLocation; shareViaSMS(shareUrl, lat, lng); }}>
+                      <Smartphone size={14} className="text-info" /> SMS
                     </button>
-                  </div>
-                </div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
 
         {trackingLocation && (
-          <div className="badge bg-primary text-white px-3 py-2 shadow-sm align-self-start">
-            <i className="bi bi-geo-alt-fill me-1"></i> Live Tracking Active
-          </div>
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="glass-panel px-3 py-2 d-flex align-items-center gap-2 text-primary fw-bold small"
+          >
+            <span className="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>
+            Live Tracking
+          </motion.div>
         )}
       </div>
 
-      {/* --- ADD REPORT BUTTON (Bottom Right) --- */}
-      <button
-        className="btn btn-primary rounded-circle shadow position-absolute z-3 d-flex align-items-center justify-content-center border-0"
-        style={{bottom: '30px', right: '20px', width: '60px', height: '60px'}}
+      {/* --- ADD REPORT BUTTON --- */}
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="btn btn-primary rounded-circle shadow-lg position-absolute z-3 d-flex align-items-center justify-content-center border-0"
+        style={{bottom: '30px', right: '20px', width: '64px', height: '64px'}}
         onClick={() => {
-          // Determine best location for new report
           let reportLocation;
           if (userLocation) {
             reportLocation = userLocation;
@@ -867,8 +822,8 @@ export default function MapPage() {
         }}
         title="Report an Issue"
       >
-        <i className="bi bi-plus-lg fs-3"></i>
-      </button>
+        <Plus size={32} />
+      </motion.button>
 
       {/* --- MAP --- */}
       <MapContainer 
@@ -888,15 +843,12 @@ export default function MapPage() {
         
         <ZoomControl position="bottomright" />
 
-        {/* Shared Location Marker (from tracking link) */}
         {sharedLocation && (
           <Marker position={sharedLocation} icon={sharedLocationIcon} zIndexOffset={999}>
             <Popup autoPan={false}>
               <div>
                 <strong className="text-primary">📍 Shared Location</strong>
-                <p className="mb-1 mt-2 small text-muted">
-                  Someone shared this location with you
-                </p>
+                <p className="mb-1 mt-2 small text-muted">Someone shared this location with you</p>
                 <div className="small">
                   <strong>Coordinates:</strong><br />
                   {sharedLocation[0].toFixed(6)}, {sharedLocation[1].toFixed(6)}
@@ -906,13 +858,10 @@ export default function MapPage() {
           </Marker>
         )}
 
-        {/* User Location Marker */}
         {userLocation && (
           <>
             <Marker position={userLocation} icon={userLocationIcon} zIndexOffset={1000}>
-              <Popup autoPan={false}>
-                <strong>You are here</strong>
-              </Popup>
+              <Popup autoPan={false}><strong>You are here</strong></Popup>
             </Marker>
             <Circle
               center={userLocation}
@@ -922,15 +871,9 @@ export default function MapPage() {
           </>
         )}
 
-        {/* Data Layers */}
         {mode === 'pins' && reports.map(r => (
-          // Note: GeoJSON is [Lng, Lat], Leaflet Marker wants [Lat, Lng]
-          // Ensure r.coords is handled correctly based on your API response
-          <Marker 
-            key={r._id} 
-            position={[r.coords[1], r.coords[0]]} 
-          >
-            <Popup minWidth={280} maxWidth={320}>
+          <Marker key={r._id} position={[r.coords[1], r.coords[0]]}>
+            <Popup minWidth={280} maxWidth={320} className="glass-popup">
               <ReportCard report={r} onUpdated={fetchData} />
             </Popup>
           </Marker>
@@ -947,35 +890,24 @@ export default function MapPage() {
           </>
         )}
 
-        {/* Crowd Safety Heatmap Layer */}
         {showCrowdHeatmap && mapInstance && (
           <CrowdHeatmapLayer map={mapInstance} points={crowdPoints} />
         )}
       </MapContainer>
 
-      {/* Crowd Safety Legend */}
       {showCrowdHeatmap && <CrowdLegend activeUserCount={activeUserCount} />}
 
-      {/* Emergency SOS Button */}
       <EmergencyButton 
         userLocation={userLocation} 
-        onEmergencyCreated={(data) => {
-          console.log('Emergency created:', data);
-          // Optionally refetch data or show notification
-        }}
+        onEmergencyCreated={(data) => console.log('Emergency created:', data)}
         onLocationRequest={(newLocation) => {
-          console.log('Location requested from emergency:', newLocation);
           setUserLocation(newLocation);
           if (mapInstance) {
-            mapInstance.flyTo(newLocation, MAP_TRACKING_ZOOM, {
-              animate: true,
-              duration: 1.5
-            });
+            mapInstance.flyTo(newLocation, MAP_TRACKING_ZOOM, { animate: true, duration: 1.5 });
           }
         }}
       />
 
-      {/* --- FORM MODAL --- */}
       {showForm && formLatLng && (
         <ReportFormModal 
           lat={formLatLng[0]} 
