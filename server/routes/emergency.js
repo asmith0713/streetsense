@@ -96,36 +96,7 @@ router.post('/', emergencyLimiter, authMiddleware, async (req, res) => {
 
     await emergency.save();
 
-    // Fetch user profile and send Telegram notifications
-    let telegramResults = [];
-    let personalContacts = [];
-    
-    if (userId) {
-      try {
-        const user = await User.findById(userId).select('name phone emergencyContacts');
-        if (user && user.emergencyContacts && user.emergencyContacts.length > 0) {
-          personalContacts = user.emergencyContacts;
-          
-          const emergencyData = {
-            userName: user.name,
-            userPhone: user.phone,
-            type,
-            severity: severity || 'high',
-            lat: latitude,
-            lng: longitude,
-            timestamp: emergency.createdAt
-          };
-          
-          // Send Telegram alerts to all emergency contacts
-          telegramResults = await sendEmergencyAlertsToContacts(user.emergencyContacts, emergencyData);
-          
-          console.log(`📱 Sent Telegram alerts to ${telegramResults.filter(r => r.success).length} contacts`);
-        }
-      } catch (err) {
-        console.error('Error sending Telegram notifications:', err);
-        // Don't fail the emergency creation if notifications fail
-      }
-    }
+    // Telegram notifications disabled
 
     // Return emergency details with contact numbers
     res.status(201).json({
