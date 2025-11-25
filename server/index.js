@@ -111,21 +111,7 @@ if (process.env.NODE_ENV === 'production') {
     immutable: true
   }));
   
-  // SPA Routing: Serve index.html for all non-API routes
-  app.get('*', (req, res, next) => {
-    // Skip API routes
-    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/') || req.path.startsWith('/data/')) {
-      return next();
-    }
-    
-    // Serve index.html for all React Router routes
-    res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
-      if (err) {
-        console.error('Error serving index.html:', err);
-        res.status(500).send('Error loading application');
-      }
-    });
-  });
+  // Removed SPA routing - backend should not serve frontend files in Docker
 }
 
 // Health Check
