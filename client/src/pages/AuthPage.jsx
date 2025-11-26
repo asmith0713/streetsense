@@ -166,7 +166,7 @@ export default function AuthPage() {
 
   return (
     <>
-      <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="position-fixed top-0 start-50 translate-middle-x mt-3 mt-md-4" style={{ zIndex: 9999, width: '90%', maxWidth: '500px' }}>
         <AnimatePresence>
           {toasts.map(toast => (
             <Toast
