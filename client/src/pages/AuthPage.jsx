@@ -2,10 +2,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { motion } from 'framer-motion';
-import { LogIn, UserPlus, Shield, ArrowRight, ArrowLeft } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LogIn, Shield, ArrowRight, ArrowLeft } from 'lucide-react';
 import API from '../api';
 import { setCookie } from '../utils/cookies';
+import Toast from '../components/Toast';
 
 export default function AuthPage() {
   const [searchParams] = useSearchParams();
@@ -15,7 +16,41 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const [passwordError, setPasswordError] = useState('');
   const navigate = useNavigate();
+
+  const showToast = (message, type = 'info', duration = 5000) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type, duration }]);
+  };
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  const validatePassword = (pwd) => {
+    if (pwd.length < 8) {
+      return 'Password must be at least 8 characters long';
+    }
+    if (!/\d/.test(pwd)) {
+      return 'Password must contain at least one number';
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) {
+      return 'Password must contain at least one special character';
+    }
+    return '';
+  };
+
+  const handlePasswordChange = (e) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    if (!isLogin && newPassword) {
+      setPasswordError(validatePassword(newPassword));
+    } else {
+      setPasswordError('');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,6 +64,7 @@ export default function AuthPage() {
           headers: { 'x-admin-password': adminPassword }
         });
         sessionStorage.setItem('streetsense_admin_pwd', adminPassword);
+        showToast('Admin login successful!', 'success', 3000);
         console.log('Admin authentication successful');
         navigate('/admin');
       } catch (err) {
@@ -36,7 +72,7 @@ export default function AuthPage() {
         const errorMsg = err.response?.status === 401 
           ? 'Invalid admin password. Access denied.' 
           : 'Failed to verify admin credentials. Please try again.';
-        alert(errorMsg);
+        showToast(errorMsg, 'error');
       } finally {
         setLoading(false);
       }
@@ -44,6 +80,16 @@ export default function AuthPage() {
     }
     
     // Handle regular user login/register
+    // Validate password for registration
+    if (!isLogin) {
+      const validationError = validatePassword(password);
+      if (validationError) {
+        showToast(validationError, 'error');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
       const res = await API.post(endpoint, { email, password });
@@ -67,11 +113,12 @@ export default function AuthPage() {
       const action = isLogin ? 'logged in' : 'registered';
       console.log(`Successfully ${action}!`);
       
-      // Navigate to map
+      // Show success and navigate to map
+      showToast(isLogin ? 'Login successful!' : 'Account created successfully!', 'success', 3000);
       navigate('/map');
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Authentication failed. Please try again.';
-      alert(errorMsg);
+      showToast(errorMsg, 'error');
       console.error('Auth error:', err);
     } finally {
       setLoading(false);
@@ -100,11 +147,12 @@ export default function AuthPage() {
       // Dispatch custom event to update navigation
       window.dispatchEvent(new Event('authChange'));
 
+      showToast('Successfully logged in with Google!', 'success', 3000);
       console.log('Successfully logged in with Google!');
       navigate('/map');
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Google authentication failed. Please try again.';
-      alert(errorMsg);
+      showToast(errorMsg, 'error');
       console.error('Google auth error:', err);
     } finally {
       setLoading(false);
@@ -113,12 +161,26 @@ export default function AuthPage() {
 
   const handleGoogleError = () => {
     console.error('Google Sign-In failed');
-    alert('Google Sign-In failed. Please try again.');
+    showToast('Google Sign-In failed. Please try again.', 'error');
   };
 
   return (
-    <div className="page-container auth-page-bg d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
-      <motion.div 
+    <>
+      <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <AnimatePresence>
+          {toasts.map(toast => (
+            <Toast
+              key={toast.id}
+              message={toast.message}
+              type={toast.type}
+              onClose={() => removeToast(toast.id)}
+              duration={toast.duration}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
+      <div className="page-container auth-page-bg d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
+        <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -165,12 +227,31 @@ export default function AuthPage() {
               </div>
               <div className="mb-4">
                 <label className="form-label small fw-bold text-muted">Password</label>
+                {!isLogin && (
+                  <div className="alert alert-info py-2 px-3 mb-2" style={{ fontSize: '0.85rem', borderRadius: '8px', backgroundColor: 'rgba(13, 110, 253, 0.1)', border: '1px solid rgba(13, 110, 253, 0.2)' }}>
+                    <div className="d-flex align-items-start">
+                      <span className="me-2" style={{ fontSize: '1rem' }}>ℹ️</span>
+                      <div>
+                        <strong className="d-block mb-1">Password Requirements:</strong>
+                        <small className={`d-block ${password.length >= 8 ? 'text-success fw-bold' : 'text-muted'}`}>
+                          {password.length >= 8 ? '✓' : '○'} Minimum 8 characters
+                        </small>
+                        <small className={`d-block ${/\d/.test(password) ? 'text-success fw-bold' : 'text-muted'}`}>
+                          {/\d/.test(password) ? '✓' : '○'} At least 1 number (0-9)
+                        </small>
+                        <small className={`d-block ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-success fw-bold' : 'text-muted'}`}>
+                          {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? '✓' : '○'} At least 1 special character (!@#$%^&*...)
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <input
                   type="password"
-                  className="input-modern"
-                  placeholder="••••••••"
+                  className={`input-modern ${passwordError && !isLogin ? 'is-invalid' : ''}`}
+                  placeholder={isLogin ? '••••••••' : 'Create a strong password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                   required
                 />
               </div>
@@ -233,5 +314,6 @@ export default function AuthPage() {
         </div>
       </motion.div>
     </div>
+    </>
   );
 }

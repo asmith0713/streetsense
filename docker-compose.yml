@@ -1,33 +1,9 @@
 version: '3.8'
 
 services:
-  # MongoDB Database
-  mongodb:
-    image: mongo:7.0
-    container_name: streetsense-mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: adminpassword
-      MONGO_INITDB_DATABASE: streetsense
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
-    networks:
-      - streetsense-network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Backend Server
   backend:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
+    image: asmithreddy/streetsense-server:latest
     container_name: streetsense-backend
     restart: unless-stopped
     ports:
@@ -35,16 +11,14 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
-      MONGO_URI: mongodb://admin:adminpassword@mongodb:27017/streetsense?authSource=admin
-      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_change_this}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-your_admin_password}
-      CORS_ORIGIN: http://localhost:3000,http://localhost:80
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      # Use MongoDB Atlas - replace with your connection string
+      MONGO_URI: mongodb+srv://maramreddy0713_db_user:dgVIor8Yjfsonxu4@cluster0.jumzcvr.mongodb.net/streetsense
+      JWT_SECRET: niteeshlovessumaiyabutshedoesnt
+      ADMIN_PASSWORD: 12qwaszx@A
+      CORS_ORIGIN: http://localhost:3000,http://localhost:80,http://localhost
+      GOOGLE_CLIENT_ID: 236637181211-66567rahq1a8samle5q40q6po87j6up6.apps.googleusercontent.com
     volumes:
       - ./server/uploads:/app/uploads
-    depends_on:
-      mongodb:
-        condition: service_healthy
     networks:
       - streetsense-network
     healthcheck:
@@ -56,16 +30,14 @@ services:
 
   # Frontend Client
   frontend:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
+    image: asmithreddy/streetsense-client:latest
     container_name: streetsense-frontend
     restart: unless-stopped
     ports:
       - "80:80"
     environment:
       REACT_APP_BACKEND_URL: http://localhost:5000
-      REACT_APP_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      REACT_APP_GOOGLE_CLIENT_ID: 236637181211-66567rahq1a8samle5q40q6po87j6up6.apps.googleusercontent.com
     depends_on:
       - backend
     networks:
@@ -80,9 +52,3 @@ services:
 networks:
   streetsense-network:
     driver: bridge
-
-volumes:
-  mongodb_data:
-    driver: local
-  mongodb_config:
-    driver: local
