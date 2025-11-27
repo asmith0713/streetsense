@@ -10,24 +10,20 @@ export function resolveImageUrl(photoUrl) {
     return photoUrl;
   }
   
-  // Server paths - always prepend BACKEND_URL
+  // Server paths - construct URL based on BACKEND_URL
+  // In production with Nginx proxy, BACKEND_URL is https://domain (no port)
+  // Images are served at /uploads by Nginx
   if (photoUrl.startsWith('/uploads')) {
-    const resolvedUrl = `${BACKEND_URL}${photoUrl}`;
-    console.log('Image URL resolved:', photoUrl, '->', resolvedUrl);
-    return resolvedUrl;
+    return `${BACKEND_URL}${photoUrl}`;
   }
   
   if (photoUrl.startsWith('/api/uploads')) {
-    // Remove /api prefix as backend serves /uploads directly
-    const resolvedUrl = `${BACKEND_URL}${photoUrl.replace('/api', '')}`;
-    console.log('Image URL resolved (removed /api):', photoUrl, '->', resolvedUrl);
-    return resolvedUrl;
+    // Remove /api prefix as uploads are served directly
+    return `${BACKEND_URL}${photoUrl.replace('/api', '')}`;
   }
   
   if (photoUrl.startsWith('uploads/')) {
-    const resolvedUrl = `${BACKEND_URL}/${photoUrl}`;
-    console.log('Image URL resolved (relative):', photoUrl, '->', resolvedUrl);
-    return resolvedUrl;
+    return `${BACKEND_URL}/${photoUrl}`;
   }
   
   // Ignore filesystem paths
@@ -41,7 +37,5 @@ export function resolveImageUrl(photoUrl) {
   }
   
   // Default - assume it's a relative path to uploads
-  const resolvedUrl = `${BACKEND_URL}/uploads/${photoUrl.replace(/^\//, '')}`;
-  console.log('Image URL resolved (default):', photoUrl, '->', resolvedUrl);
-  return resolvedUrl;
+  return `${BACKEND_URL}/uploads/${photoUrl.replace(/^\//, '')}`;
 }

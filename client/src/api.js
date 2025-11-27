@@ -3,11 +3,13 @@
 import axios from 'axios';
 import { getCookie } from './utils/cookies';
 
-// Use env var or window location logic, falling back to localhost for dev
+// Use env var or auto-detect based on current URL
+// In production with Nginx: API is at same domain (proxied via /api)
+// In development: API is at localhost:5000
 export const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 
   (window.location.hostname === 'localhost' 
     ? 'http://localhost:5000' 
-    : `${window.location.protocol}//${window.location.hostname}:5000`);
+    : `${window.location.protocol}//${window.location.hostname}`);
 
 const API = axios.create({ baseURL: `${BACKEND_URL}/api` });
 
