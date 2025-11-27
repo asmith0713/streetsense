@@ -46,18 +46,18 @@ echo "[4/8] Installing PM2..."
 npm install -g pm2
 
 echo ""
-echo "[5/8] Cloning repository..."
-cd /root
-if [ -d "streetsense" ]; then
-    echo "Removing existing streetsense directory..."
-    rm -rf streetsense
+echo "[5/8] Verifying repository root..."
+REPO_DIR="$(pwd)"
+
+if [ ! -d .git ]; then
+    echo "This script must be run inside the streetsense repository root."
+    echo "Run: git clone $REPO_URL && cd streetsense"
+    exit 1
 fi
-git clone $REPO_URL
-cd streetsense
 
 echo ""
 echo "[5a/8] Setting up backend..."
-cd /root/streetsense/server
+cd server
 npm install
 
 # Create .env file
@@ -77,7 +77,7 @@ chmod 755 uploads
 
 echo ""
 echo "[5b/8] Setting up frontend..."
-cd /root/streetsense/client
+cd ../client
 npm install --legacy-peer-deps
 
 # Create production environment
@@ -177,7 +177,7 @@ server {
     
     # Frontend - Serve React build
     location / {
-        root /root/streetsense/client/build;
+        root ${REPO_DIR}/client/build;
         index index.html;
         try_files $uri $uri/ /index.html;
         
@@ -217,7 +217,7 @@ server {
     
     # Uploaded images - Serve directly from filesystem
     location /uploads {
-        alias /root/streetsense/server/uploads;
+        alias ${REPO_DIR}/server/uploads;
         add_header Access-Control-Allow-Origin *;
         add_header Cache-Control "public, max-age=86400";
         add_header Cross-Origin-Resource-Policy "cross-origin";
@@ -258,7 +258,7 @@ systemctl enable nginx
 
 echo ""
 echo "[8/8] Starting backend with PM2..."
-cd /root/streetsense/server
+cd $REPO_DIR/server
 
 # Stop existing if running
 pm2 delete streetsense-backend 2>/dev/null || true
@@ -295,7 +295,7 @@ echo "  pm2 status                      # Check status"
 echo "  tail -f /var/log/nginx/error.log # Nginx errors"
 echo ""
 echo "To update after code changes:"
-echo "  cd /root/streetsense && git pull"
+echo "  cd ${REPO_DIR} && git pull"
 echo "  cd server && npm install && pm2 restart streetsense-backend"
 echo "  cd ../client && npm install --legacy-peer-deps && npm run build"
 echo ""

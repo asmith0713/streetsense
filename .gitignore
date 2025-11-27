@@ -36,3 +36,5 @@ client/public/test-admin.html
 # Docker
 docker-compose.override.yml
 docker-compose.yml
+
+VULTR_DEPLOY.sh
