@@ -38,7 +38,7 @@ const fileFilter = (req, file, cb) => {
     cb(new Error('Invalid file type. Only JPEG, JPG, PNG, GIF and WEBP images are allowed.'), false);
   }
 }
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: fileFilter }); // 5MB limit
+const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 }, fileFilter: fileFilter }); // 50MB limit
 
 // helper
 function computeTimeOfDay(date = new Date()) {
@@ -106,24 +106,33 @@ router.get('/', async (req, res) => {
 // POST /api/reports  (multipart/form-data or JSON)
 router.post('/',mutationLimiter, authMiddleware, upload.single('photo'), async (req, res) => {
     try {
+      console.log('POST /api/reports - Request body:', req.body);
+      console.log('POST /api/reports - File:', req.file ? req.file.filename : 'No file');
+      
       const { title, description = '', category = 'other', lat, lng, timeOfDay } = req.body;
-      if (!title || !lat || !lng) return res.status(400).json({ error: 'title, lat and lng required' });
+      if (!title || !lat || !lng) {
+        console.error('Missing required fields:', { title: !!title, lat: !!lat, lng: !!lng });
+        return res.status(400).json({ error: 'title, lat and lng required' });
+      }
   
       const latitude = parseFloat(lat);
       const longitude = parseFloat(lng);
 
       // Validate coordinates - check NaN first!
       if (isNaN(latitude) || isNaN(longitude)) {
+        console.error('Invalid coordinates:', { lat, lng, latitude, longitude });
         return res.status(400).json({ error: 'Coordinates must be valid numbers' });
       }
 
       if (latitude < -90 || latitude > 90) {
-      return res.status(400).json({ error: 'Latitude must be between -90 and 90' });
-    }
+        console.error('Latitude out of range:', latitude);
+        return res.status(400).json({ error: 'Latitude must be between -90 and 90' });
+      }
 
       if (longitude < -180 || longitude > 180) {
-      return res.status(400).json({ error: 'Longitude must be between -180 and 180' });
-    }
+        console.error('Longitude out of range:', longitude);
+        return res.status(400).json({ error: 'Longitude must be between -180 and 180' });
+      }
   
       const photoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.photoUrl || null;
       const rep = new Report({
@@ -135,10 +144,12 @@ router.post('/',mutationLimiter, authMiddleware, upload.single('photo'), async (
         photoUrl
       });
       await rep.save();
+      console.log('Report saved successfully:', rep._id);
       res.json({ success: true, report: rep });
     } catch (err) {
-      console.error('POST /api/reports', err);
-      res.status(500).json({ message: 'Server error' });
+      console.error('POST /api/reports error:', err.message);
+      console.error('Stack:', err.stack);
+      res.status(500).json({ message: 'Server error', error: err.message });
     }
   });
 

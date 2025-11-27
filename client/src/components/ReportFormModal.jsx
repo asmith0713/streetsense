@@ -15,7 +15,6 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
     if (title.length > 200) return alert('Title must be less than 200 characters');
     if (description.length > 2000) return alert('Description must be less than 2000 characters');
     if (isNaN(lat) || isNaN(lng)) return alert('Invalid location coordinates');
-    if (photo && photo.size > 5 * 1024 * 1024) return alert('Image must be less than 5MB');
     
     onSubmit({ title, description, category, lat, lng, photo });
   }
@@ -118,7 +117,7 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
                     onChange={e => setPhoto(e.target.files[0])} 
                   />
                 </div>
-                <div className="form-text small">Max size: 5MB</div>
+                <div className="form-text small">Upload your photo evidence</div>
               </div>
             </form>
           </div>

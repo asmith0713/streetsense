@@ -533,12 +533,21 @@ export default function MapPage() {
         if (data[k] !== null && data[k] !== undefined) form.append(k, data[k]);
       });
       
-      await API.post('/reports', form);
+      const response = await API.post('/reports', form, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      console.log('Report submitted successfully:', response.data);
       await fetchData();
       setShowForm(false);
+      alert('Report submitted successfully!');
     } catch (err) {
       console.error('Submit error:', err);
-      alert('Failed to submit report. Please try again.');
+      console.error('Error response:', err.response?.data);
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Failed to submit report. Please try again.';
+      alert(errorMsg);
     }
   };
 
