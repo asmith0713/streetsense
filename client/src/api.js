@@ -5,7 +5,9 @@ import { getCookie } from './utils/cookies';
 
 // Use env var or window location logic, falling back to localhost for dev
 export const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 
-  (window.location.hostname === 'localhost' ? 'http://localhost:5000' : `http://${window.location.hostname}:5000`);
+  (window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000' 
+    : `${window.location.protocol}//${window.location.hostname}:5000`);
 
 const API = axios.create({ baseURL: `${BACKEND_URL}/api` });
 

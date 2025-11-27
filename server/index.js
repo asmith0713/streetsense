@@ -66,7 +66,14 @@ const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-app.use('/uploads', express.static(uploadsDir, { maxAge: '1d', etag: true }));
+// Serve static files with CORS headers
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(uploadsDir, { maxAge: '1d', etag: true }));
+
 app.use('/data', express.static(dataDir, { maxAge: '1h', etag: true }));
 
 // 4. Rate Limiting
