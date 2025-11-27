@@ -284,9 +284,10 @@ export default function AuthPage() {
                 <GoogleLogin
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
-                  useOneTap
                   theme="filled_blue"
                   shape="pill"
+                  size="large"
+                  width="300"
                 />
               </div>
 

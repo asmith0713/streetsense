@@ -82,11 +82,11 @@ async function seed() {
     { title: 'Street dogs barking', description: 'Dog pack howling throughout the night', category: 'stray', location: { type: 'Point', coordinates: [78.4800, 17.4089] }, timeOfDay: 'night', photoUrl: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=400' },
 
     // Harassment & Safety
-    { title: 'Eve-teasing at bus stop', description: 'Group of men harassing women daily at 7pm', category: 'eve-teasing', location: { type: 'Point', coordinates: [78.4666, 17.4333] }, timeOfDay: 'evening', photoUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400' },
+    { title: 'Eve-teasing at bus stop', description: 'Group of men harassing women daily at 7pm', category: 'eve-teasing', location: { type: 'Point', coordinates: [78.4666, 17.4333] }, timeOfDay: 'night', photoUrl: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400' },
     { title: 'Stalking incident', description: 'Man following women from metro station', category: 'stalking', location: { type: 'Point', coordinates: [78.4533, 17.4267] }, timeOfDay: 'night', photoUrl: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400' },
     { title: 'Verbal harassment', description: 'Men passing inappropriate comments near college', category: 'harassment', location: { type: 'Point', coordinates: [78.4422, 17.3899] }, timeOfDay: 'day', photoUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400' },
     { title: 'Drunk men causing trouble', description: 'Intoxicated group harassing passersby', category: 'harassment', location: { type: 'Point', coordinates: [78.4777, 17.4411] }, timeOfDay: 'night', photoUrl: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400' },
-    { title: 'Catcalling incident', description: 'Men whistling and shouting at women joggers', category: 'eve-teasing', location: { type: 'Point', coordinates: [78.3889, 17.4389] }, timeOfDay: 'evening', photoUrl: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400' },
+    { title: 'Catcalling incident', description: 'Men whistling and shouting at women joggers', category: 'eve-teasing', location: { type: 'Point', coordinates: [78.3889, 17.4389] }, timeOfDay: 'night', photoUrl: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400' },
 
     // Additional Mixed Issues
     { title: 'Park vandalism', description: 'Park benches and playground equipment damaged', category: 'other', location: { type: 'Point', coordinates: [78.4655, 17.4178] }, timeOfDay: 'day', photoUrl: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=400' },
