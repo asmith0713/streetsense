@@ -5,7 +5,10 @@ http://65.20.88.145.nip.io {
 https://65.20.88.145.nip.io {
     encode zstd gzip
 
-    @backend path /api/* /auth/* /reports/* /locations/* /heat/* /emergency/* /uploads/*
+    @uploads path /uploads/*
+    reverse_proxy @uploads backend:5000
+
+    @backend path /api/* /auth/* /reports/* /locations/* /heat/* /emergency/*
     reverse_proxy @backend backend:5000
 
     reverse_proxy frontend:80
