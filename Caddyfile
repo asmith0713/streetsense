@@ -1,8 +1,8 @@
-http://{$PUBLIC_HOST}.nip.io {
-    redir https://{$PUBLIC_HOST}.nip.io{uri} permanent
+http://65.20.88.145.nip.io {
+    redir https://65.20.88.145.nip.io{uri} permanent
 }
 
-https://{$PUBLIC_HOST}.nip.io {
+https://65.20.88.145.nip.io {
     encode zstd gzip
 
     @backend path /api/* /auth/* /reports/* /locations/* /heat/* /emergency/* /uploads/*
