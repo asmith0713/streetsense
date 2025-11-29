@@ -58,9 +58,34 @@ html {
 .app-container {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   /* Fix for iOS Safari bottom bar */
   min-height: -webkit-fill-available;
+}
+
+.app-container > main {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.map-page-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100%;
+  position: relative;
+}
+
+@supports (-webkit-touch-callout: none) {
+  .map-page-root {
+    min-height: -webkit-fill-available;
+    height: -webkit-fill-available;
+  }
+}
+
+.map-page-root .leaflet-container {
+  flex: 1 1 auto;
+  height: 100%;
 }
 
 .navbar {

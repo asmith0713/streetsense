@@ -554,12 +554,12 @@ export default function MapPage() {
   };
 
   return (
-    <div className="d-flex flex-column h-100 w-100 position-relative overflow-hidden">
+    <div className="map-page-root d-flex flex-column flex-grow-1 w-100 position-relative overflow-hidden">
       
       {/* --- TOP CONTROLS --- */}
       <div
         className="position-absolute top-0 start-0 end-0 px-3 pt-3 z-3 pointer-events-none"
-        style={{ marginTop: '60px' }}
+        style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 60px)' }}
       >
         <motion.div 
           initial={{ y: -20, opacity: 0 }}
@@ -743,7 +743,10 @@ export default function MapPage() {
       </AnimatePresence>
 
       {/* --- BOTTOM LEFT CONTROLS --- */}
-      <div className="position-absolute bottom-0 start-0 mb-4 ms-3 z-3 d-flex flex-column gap-2 pointer-events-none">
+      <div
+        className="position-absolute start-0 ms-3 z-3 d-flex flex-column gap-2 pointer-events-none"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}
+      >
         <div className="pointer-events-auto d-flex flex-column gap-2">
           <motion.button
             whileHover={{ scale: 1.05 }}
