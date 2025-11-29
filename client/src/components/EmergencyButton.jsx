@@ -114,10 +114,10 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
         onClick={handleShow}
         className="position-fixed rounded-circle d-flex align-items-center justify-content-center border-0 shadow-lg emergency-sos-btn"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)',
-          right: '30px',
-          width: '64px',
-          height: '64px',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 4.5rem)',
+          right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
+          width: '4rem',
+          height: '4rem',
           zIndex: 1050
         }}
       >

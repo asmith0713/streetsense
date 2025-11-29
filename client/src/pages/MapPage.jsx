@@ -744,8 +744,11 @@ export default function MapPage() {
 
       {/* --- BOTTOM LEFT CONTROLS --- */}
       <div
-        className="position-absolute start-0 ms-3 z-3 d-flex flex-column gap-2 pointer-events-none"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}
+        className="position-fixed z-3 d-flex flex-column gap-2 pointer-events-none"
+        style={{
+          left: 'calc(env(safe-area-inset-left, 0px) + 1.25rem)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 2.75rem)'
+        }}
       >
         <div className="pointer-events-auto d-flex flex-column gap-2">
           <motion.button
