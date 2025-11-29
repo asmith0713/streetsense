@@ -575,7 +575,13 @@ export default function MapPage() {
           </div>
 
           {/* Filters */}
-          <div className={`d-none d-md-flex gap-2 flex-grow-1 flex-wrap align-items-center ${showFilters ? 'd-flex w-100 mt-2 order-last' : ''}`}>
+          <div
+            className={`gap-2 flex-grow-1 flex-wrap align-items-center ${
+              showFilters
+                ? 'd-flex flex-column flex-sm-row w-100 mt-2 order-last'
+                : 'd-none d-md-flex'
+            }`}
+          >
             <div className="input-group input-group-sm" style={{maxWidth: '180px'}}>
               <span className="input-group-text input-group-bg border-end-0"><Filter size={14} /></span>
               <select 
