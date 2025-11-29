@@ -557,12 +557,15 @@ export default function MapPage() {
     <div className="d-flex flex-column h-100 w-100 position-relative overflow-hidden">
       
       {/* --- TOP CONTROLS --- */}
-      <div className="position-absolute top-0 start-0 end-0 p-3 z-3 pointer-events-none" style={{ marginTop: '60px' }}>
+      <div
+        className="position-absolute top-0 start-0 end-0 px-3 pt-3 z-3 pointer-events-none"
+        style={{ marginTop: '60px' }}
+      >
         <motion.div 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="glass-panel mx-auto pointer-events-auto p-2 d-flex gap-2 flex-wrap align-items-center justify-content-between shadow-lg" 
-          style={{maxWidth: '900px'}}
+          className="glass-panel mx-auto pointer-events-auto p-2 d-flex gap-2 flex-wrap align-items-center justify-content-between shadow-lg position-relative"
+          style={{ maxWidth: '900px', width: '100%' }}
         >
           {/* Mobile Toggle for Filters */}
           <div className="d-flex gap-2">
