@@ -1,0 +1,12 @@
+http://{$PUBLIC_HOST}.nip.io {
+    redir https://{$PUBLIC_HOST}.nip.io{uri} permanent
+}
+
+https://{$PUBLIC_HOST}.nip.io {
+    encode zstd gzip
+
+    @backend path /api/* /auth/* /reports/* /locations/* /heat/* /emergency/* /uploads/*
+    reverse_proxy @backend backend:5000
+
+    reverse_proxy frontend:80
+}

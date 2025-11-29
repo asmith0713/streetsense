@@ -14,19 +14,23 @@ if (!JWT_SECRET) {
 }
 
 // Initialize Google OAuth client
-const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+let googleClient = null;
+if (GOOGLE_CLIENT_ID) {
+  googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+  console.log('✅ Google OAuth client initialized with Client ID:', GOOGLE_CLIENT_ID);
+} else {
+  console.warn('⚠️ GOOGLE_CLIENT_ID not set. Google OAuth will be disabled.');
+}
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
     if (!email || !password) {
       return res.status(400).json({ message: 'Please enter all fields' });
     }
     
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: 'Please enter a valid email address' });
@@ -36,13 +40,11 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
-    // Check for existing user
     const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -52,8 +54,6 @@ router.post('/register', async (req, res) => {
     });
 
     const savedUser = await newUser.save();
-
-    // Create token
     const token = jwt.sign({ id: savedUser._id }, JWT_SECRET, { expiresIn: '2d' });
 
     res.json({
@@ -75,12 +75,10 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
     if (!email || !password) {
       return res.status(400).json({ message: 'Please enter email and password' });
     }
 
-    // Check for user (case-insensitive email lookup)
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
       return res.status(400).json({ message: 'Invalid email or password' });
@@ -90,13 +88,11 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'This account is linked to Google. Please sign in with Google.' });
     }
 
-    // Validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
-    // Create token
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '2d' });
 
     res.json({
@@ -118,36 +114,77 @@ router.post('/google', async (req, res) => {
   try {
     const { credential } = req.body;
 
+    console.log('📨 Google OAuth request received');
+
     if (!credential) {
+      console.error('❌ No credential provided');
       return res.status(400).json({ message: 'Google credential is required' });
     }
 
     if (!googleClient) {
+      console.error('❌ Google OAuth client not initialized. GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID);
       return res.status(503).json({ message: 'Google authentication is not configured on the server' });
     }
 
-    // Verify the Google token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: GOOGLE_CLIENT_ID
-    });
+    console.log('🔍 Verifying Google token...');
+    console.log('   Client ID:', GOOGLE_CLIENT_ID);
+
+    let ticket;
+    try {
+      // Verify the Google token
+      ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: GOOGLE_CLIENT_ID
+      });
+      console.log('✅ Token verified successfully');
+    } catch (verifyErr) {
+      console.error('❌ Token verification failed:', verifyErr.message);
+      console.error('   Full error:', verifyErr);
+      
+      // Provide specific error messages
+      if (verifyErr.message.includes('Wrong number of segments')) {
+        return res.status(400).json({ message: 'Invalid token format from Google' });
+      }
+      if (verifyErr.message.includes('audience')) {
+        return res.status(400).json({ 
+          message: 'Token audience mismatch. Check GOOGLE_CLIENT_ID configuration.',
+          debug: `Expected: ${GOOGLE_CLIENT_ID}, Got different value in token`
+        });
+      }
+      if (verifyErr.message.includes('expired')) {
+        return res.status(400).json({ message: 'Google token has expired. Please try again.' });
+      }
+      
+      return res.status(400).json({ 
+        message: 'Failed to verify Google token',
+        error: verifyErr.message 
+      });
+    }
 
     const payload = ticket.getPayload();
+    console.log('📋 Token payload:', {
+      sub: payload.sub,
+      email: payload.email,
+      name: payload.name ? '***' : 'N/A'
+    });
+
     const { sub: googleId, email, name, picture } = payload;
 
     if (!email) {
+      console.error('❌ No email in Google payload');
       return res.status(400).json({ message: 'Unable to get email from Google account' });
     }
 
     // Check if user exists
+    console.log('🔍 Looking up user with email:', email);
     let user = await User.findOne({ 
       $or: [{ googleId }, { email: email.toLowerCase() }] 
     });
 
     if (user) {
-      // User exists - update Google info if needed
+      console.log('👤 Existing user found:', user._id);
       if (!user.googleId && user.authProvider === 'local') {
-        // Link Google account to existing local account
+        console.log('🔗 Linking Google account to existing local account');
         user.googleId = googleId;
         user.authProvider = 'google';
         user.name = name;
@@ -155,7 +192,7 @@ router.post('/google', async (req, res) => {
         await user.save();
       }
     } else {
-      // Create new user
+      console.log('✨ Creating new user');
       user = new User({
         email: email.toLowerCase(),
         googleId,
@@ -164,10 +201,12 @@ router.post('/google', async (req, res) => {
         authProvider: 'google'
       });
       await user.save();
+      console.log('✅ New user created:', user._id);
     }
 
     // Create JWT token
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '2d' });
+    console.log('🎫 JWT token generated');
 
     res.json({
       token,
@@ -180,8 +219,9 @@ router.post('/google', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Google Auth Error:', err);
-    res.status(500).json({ message: 'Google authentication failed' });
+    console.error('❌ Google Auth Error:', err.message);
+    console.error('   Full error:', err);
+    res.status(500).json({ message: 'Google authentication failed', error: err.message });
   }
 });
 
@@ -233,52 +273,7 @@ router.get('/me', async (req, res) => {
   }
 });
 
-// PUT /api/auth/emergency-contacts - Update emergency contacts
-router.put('/emergency-contacts', async (req, res) => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const { contacts } = req.body;
-
-    if (!Array.isArray(contacts)) {
-      return res.status(400).json({ message: 'Contacts must be an array' });
-    }
-
-    // Validate contacts
-    for (const contact of contacts) {
-      if (!contact.name || !contact.phone) {
-        return res.status(400).json({ message: 'Each contact must have name and phone' });
-      }
-      if (contact.phone.length < 10) {
-        return res.status(400).json({ message: 'Phone number must be at least 10 digits' });
-      }
-    }
-
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    user.emergencyContacts = contacts;
-    await user.save();
-
-    res.json({
-      message: 'Emergency contacts updated successfully',
-      contacts: user.emergencyContacts
-    });
-
-  } catch (err) {
-    console.error('Update emergency contacts error:', err);
-    res.status(500).json({ message: 'Failed to update emergency contacts' });
-  }
-});
-
-// PUT /api/auth/profile - Update user profile (medical info, address, etc.)
+// PUT /api/auth/profile - Update user profile
 router.put('/profile', async (req, res) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -294,7 +289,6 @@ router.put('/profile', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Update fields if provided
     if (name !== undefined) user.name = name;
     if (phone !== undefined) user.phone = phone;
     if (address !== undefined) user.address = address;
@@ -302,7 +296,6 @@ router.put('/profile', async (req, res) => {
     if (allergies !== undefined) user.allergies = allergies;
     if (medicalConditions !== undefined) user.medicalConditions = medicalConditions;
     
-    // Update emergency contacts if provided
     if (Array.isArray(emergencyContacts)) {
       for (const contact of emergencyContacts) {
         if (!contact.name || !contact.phone) {
