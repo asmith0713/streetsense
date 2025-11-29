@@ -36,16 +36,15 @@ export default function ProfilePage() {
       // Check for token in cookies or storage
       const token = getCookie('token') || localStorage.getItem('streetsense_token') || localStorage.getItem('token');
       if (!token) {
-        console.warn('No authentication token found, redirecting to auth');
+        // console.warn('No authentication token found, redirecting to auth');
         navigate('/auth');
         return;
       }
 
-      console.log('Loading profile for authenticated user...');
+      // console.log('Loading profile for authenticated user...');
       const res = await API.get('/auth/me');
       const user = res.data.user;
-      
-      console.log('Profile loaded successfully:', user.email);
+      // console.log('Profile loaded successfully:', user.email);
       
       setProfile({
         name: user.name || '',
@@ -64,7 +63,7 @@ export default function ProfilePage() {
       console.error('Error status:', err.response?.status);
       
       if (err.response?.status === 401) {
-        console.warn('Authentication failed (401), redirecting to auth');
+        // console.warn('Authentication failed (401), redirecting to auth');
         // Clear invalid tokens
         localStorage.removeItem('token');
         localStorage.removeItem('streetsense_token');

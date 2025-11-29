@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, ZoomContr
 import L from 'leaflet';
 import API from '../api';
 import { 
-  MapPin, Flame, Layers, Users, Share2, Crosshair, Navigation, Plus, 
+  MapPin, Flame, Layers, Users, Share2, Crosshair, Navigation,
   Filter, Clock, AlertTriangle, CheckCircle, Copy, MessageCircle, Smartphone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -262,7 +262,8 @@ export default function MapPage() {
 
   const requestInitialLocation = () => {
     if (!navigator.geolocation) {
-      console.warn('Geolocation not supported');
+      // console.warn('Geolocation not supported');
+      setLocationError('Geolocation not supported by your browser');
       return;
     }
 
@@ -278,7 +279,8 @@ export default function MapPage() {
         }
       },
       (error) => {
-        console.warn('Initial location request failed:', error.message);
+        // console.warn('Initial location request failed:', error.message);
+        handleLocationError(error);
       },
       {
         enableHighAccuracy: true,
@@ -533,13 +535,13 @@ export default function MapPage() {
         if (data[k] !== null && data[k] !== undefined) form.append(k, data[k]);
       });
       
-      const response = await API.post('/reports', form, {
+      await API.post('/reports', form, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-      
-      console.log('Report submitted successfully:', response.data);
+
+      // console.log('Report submitted successfully');
       await fetchData();
       setShowForm(false);
       alert('Report submitted successfully!');
@@ -810,30 +812,6 @@ export default function MapPage() {
         )}
       </div>
 
-      {/* --- ADD REPORT BUTTON --- */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className="btn btn-primary rounded-circle shadow-lg position-absolute z-3 d-flex align-items-center justify-content-center border-0"
-        style={{bottom: '30px', right: '20px', width: '64px', height: '64px'}}
-        onClick={() => {
-          let reportLocation;
-          if (userLocation) {
-            reportLocation = userLocation;
-          } else if (mapInstance) {
-            const center = mapInstance.getCenter();
-            reportLocation = [center.lat, center.lng];
-          } else {
-            reportLocation = pos;
-          }
-          setFormLatLng(reportLocation);
-          setShowForm(true);
-        }}
-        title="Report an Issue"
-      >
-        <Plus size={32} />
-      </motion.button>
-
       {/* --- MAP --- */}
       <MapContainer 
         center={pos} 
@@ -908,12 +886,14 @@ export default function MapPage() {
 
       <EmergencyButton 
         userLocation={userLocation} 
-        onEmergencyCreated={(data) => console.log('Emergency created:', data)}
         onLocationRequest={(newLocation) => {
           setUserLocation(newLocation);
           if (mapInstance) {
             mapInstance.flyTo(newLocation, MAP_TRACKING_ZOOM, { animate: true, duration: 1.5 });
           }
+        }}
+        onEmergencyCreated={(data) => {
+          // console.log('Emergency created:', data);
         }}
       />
 

@@ -54,7 +54,7 @@ router.post('/register', async (req, res) => {
     const savedUser = await newUser.save();
 
     // Create token
-    const token = jwt.sign({ id: savedUser._id }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: savedUser._id }, JWT_SECRET, { expiresIn: '2d' });
 
     res.json({
       token,
@@ -86,6 +86,10 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
+    if (!user.password || user.authProvider === 'google') {
+      return res.status(400).json({ message: 'This account is linked to Google. Please sign in with Google.' });
+    }
+
     // Validate password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -93,7 +97,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Create token
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '2d' });
 
     res.json({
       token,
@@ -163,7 +167,7 @@ router.post('/google', async (req, res) => {
     }
 
     // Create JWT token
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '2d' });
 
     res.json({
       token,

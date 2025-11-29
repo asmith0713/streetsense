@@ -32,7 +32,7 @@ export function resolveImageUrl(photoUrl) {
       photoUrl.startsWith('C:\\') || 
       photoUrl.startsWith('D:\\') ||
       /^[A-Za-z]:[\\]/.test(photoUrl)) {
-    console.warn('Ignoring server file system path:', photoUrl);
+    // console.warn('Ignoring server file system path:', photoUrl);
     return null;
   }
   

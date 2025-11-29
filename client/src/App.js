@@ -89,8 +89,6 @@ function Navigation() {
   // We will use var(--foreground) which is black in light mode and white in dark mode
   const brandColor = 'var(--foreground)';
   const logoColor = '#8b5cf6'; // Purple as requested
-  const togglerColor = 'var(--foreground)';
-
   return (
     <nav className="navbar navbar-expand-md fixed-top" style={navStyle}>
       <div className="container-fluid px-3 px-md-4">

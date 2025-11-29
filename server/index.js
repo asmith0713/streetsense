@@ -26,6 +26,7 @@ app.set('trust proxy', 1); // Trust proxy for rate limiter behind Nginx/Docker
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -47,7 +48,18 @@ app.use(helmet({
 }));
 
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000','http://192.168.0.102:3000','http://0.0.0.0:3000'],
+  origin: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',')
+    : [
+        'http://localhost',
+        'https://localhost',
+        'http://localhost:80',
+        'https://localhost:443',
+        'http://localhost:3000',
+        'https://localhost:3000',
+        'http://192.168.0.102:3000',
+        'http://0.0.0.0:3000'
+      ],
   credentials: true,
   optionsSuccessStatus: 200,
   maxAge: 86400,

@@ -18,7 +18,7 @@ function resolveImageUrl(photoUrl) {
   if (photoUrl.startsWith('/mnt/') || photoUrl.startsWith('/var/') || 
       photoUrl.startsWith('C:\\') || photoUrl.startsWith('D:\\') ||
       /^[A-Za-z]:[\\/]/.test(photoUrl)) {
-    console.warn('Ignoring server file system path:', photoUrl);
+    // console.warn('Ignoring server file system path:', photoUrl);
     return null;
   }
   return `${BACKEND_URL}/${photoUrl.replace(/^\//, '')}`;
@@ -115,15 +115,14 @@ export default function AdminPanel() {
   async function performDelete() {
     if (!confirmPayload) return;
     const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
-    
-    console.log('Attempting to delete report:', confirmPayload.id);
-    console.log('Admin password present:', !!adminPassword);
-    
+    // console.log('Attempting to delete report:', confirmPayload.id);
+    // console.log('Admin password present:', !!adminPassword);
+
     try {
-      const response = await API.delete(`/reports/${confirmPayload.id}`, {
+      await API.delete(`/reports/${confirmPayload.id}`, {
         headers: { 'x-admin-password': adminPassword }
       });
-      console.log('Delete response:', response.data);
+      // console.log('Delete response');
       setConfirmOpen(false);
       setConfirmPayload(null);
       alert('Report removed from map! (Archived for CSV export)');
