@@ -1,8 +1,4 @@
-http://65.20.88.145.nip.io {
-    redir https://65.20.88.145.nip.io{uri} permanent
-}
-
-https://65.20.88.145.nip.io {
+street-sense.app, www.street-sense.app {
     encode zstd gzip
 
     @uploads path /uploads/*
