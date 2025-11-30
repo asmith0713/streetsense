@@ -98,6 +98,24 @@ router.post('/', emergencyLimiter, authMiddleware, async (req, res) => {
 
     // Telegram notifications disabled
 
+    // Fetch user's personal contacts if authenticated
+    let personalContacts = [];
+    if (userId) {
+      try {
+        const user = await User.findById(userId).lean();
+        if (user && Array.isArray(user.emergencyContacts)) {
+          personalContacts = user.emergencyContacts.map(c => ({
+            name: c.name,
+            phone: c.phone,
+            relationship: c.relationship || '',
+            telegramId: c.telegramId || ''
+          }));
+        }
+      } catch (e) {
+        console.error('Error fetching user contacts:', e);
+      }
+    }
+
     // Return emergency details with contact numbers
     res.status(201).json({
       success: true,
@@ -113,7 +131,7 @@ router.post('/', emergencyLimiter, authMiddleware, async (req, res) => {
         createdAt: emergency.createdAt
       },
       emergencyContacts: EMERGENCY_CONTACTS,
-      personalContacts: personalContacts,
+      personalContacts,
       contactedAuthorities: emergency.authorities.map(a => ({
         type: a.type,
         number: a.contactNumber
