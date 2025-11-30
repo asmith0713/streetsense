@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import API, { BACKEND_URL } from '../api';
 import ConfirmModal from '../components/ConfirmModal';
 import Lightbox from '../components/Lightbox';
+import { useNotifications } from '../components/NotificationProvider';
 import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, Flag, AlertTriangle, LogOut, Filter, Download, 
@@ -31,21 +32,28 @@ export default function AdminPanel() {
   const [emergencies, setEmergencies] = useState([]);
   const [activeTab, setActiveTab] = useState('reports');
   const [loading, setLoading] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmPayload, setConfirmPayload] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [csvCategory, setCsvCategory] = useState('all');
   const [csvTime, setCsvTime] = useState('7d');
   const [showDeletedReports, setShowDeletedReports] = useState(false);
+  const { notifySuccess, notifyError, notifyWarning } = useNotifications();
 
-  useEffect(() => { 
-    if (authorized) {
-      loadReports();
-      loadEmergencies();
+  const closeConfirmDialog = () => setConfirmDialog(null);
+
+  const executeConfirmAction = async () => {
+    if (!confirmDialog?.onConfirm) {
+      closeConfirmDialog();
+      return;
     }
-  }, [authorized, showDeletedReports]);
+    try {
+      await confirmDialog.onConfirm();
+    } finally {
+      closeConfirmDialog();
+    }
+  };
 
-  async function loadReports() {
+  const loadReports = useCallback(async () => {
     setLoading(true);
     try {
       const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
@@ -69,24 +77,32 @@ export default function AdminPanel() {
       const errorMsg = err.response?.status === 401 
         ? 'Admin authentication failed. Please logout and login again.' 
         : 'Failed to fetch reports.';
-      alert(errorMsg); 
+      notifyError(errorMsg); 
     } finally { 
       setLoading(false); 
     }
-  }
+  }, [notifyError, showDeletedReports]);
 
-  async function loadEmergencies() {
+  const loadEmergencies = useCallback(async () => {
     try {
       const res = await API.get('/emergency/active');
       setEmergencies(res.data.emergencies || []);
     } catch (err) {
       console.error('Load emergencies error:', err);
+      notifyError('Failed to load emergencies');
     }
-  }
+  }, [notifyError]);
+
+  useEffect(() => { 
+    if (authorized) {
+      loadReports();
+      loadEmergencies();
+    }
+  }, [authorized, loadReports, loadEmergencies]);
 
   async function checkPassword() {
     if (!password || password.trim() === '') {
-      alert('Please enter admin password');
+      notifyWarning('Please enter admin password');
       return;
     }
     
@@ -96,54 +112,63 @@ export default function AdminPanel() {
       });
       sessionStorage.setItem('streetsense_admin_pwd', password);
       setAuthorized(true);
+      notifySuccess('Admin access confirmed.');
       loadReports();
     } catch (err) {
       console.error('Admin auth error:', err);
       const errorMsg = err.response?.status === 401 
         ? 'Invalid admin password. Access denied.' 
         : 'Failed to verify admin credentials. Please try again.';
-      alert(errorMsg);
+      notifyError(errorMsg);
       setPassword('');
     }
   }
 
-  function confirmDelete(reportId) {
-    setConfirmPayload({ id: reportId, action: 'delete' });
-    setConfirmOpen(true);
-  }
-
-  async function performDelete() {
-    if (!confirmPayload) return;
+  const deleteReport = useCallback(async (reportId) => {
     const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
-    // console.log('Attempting to delete report:', confirmPayload.id);
-    // console.log('Admin password present:', !!adminPassword);
-
     try {
-      await API.delete(`/reports/${confirmPayload.id}`, {
+      await API.delete(`/reports/${reportId}`, {
         headers: { 'x-admin-password': adminPassword }
       });
-      // console.log('Delete response');
-      setConfirmOpen(false);
-      setConfirmPayload(null);
-      alert('Report removed from map! (Archived for CSV export)');
+      notifySuccess('Report removed from public map. It will still appear in CSV exports.');
       await loadReports();
-    } catch (err) { 
+    } catch (err) {
       console.error('Delete error:', err);
-      console.error('Error response:', err.response);
       const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Delete failed';
-      alert(`Failed: ${errorMsg}`); 
+      notifyError(`Failed: ${errorMsg}`);
     }
+  }, [loadReports, notifyError, notifySuccess]);
+
+  function confirmDelete(reportId) {
+    setConfirmDialog({
+      title: 'Remove report from map?',
+      message: 'This hides the report from the live map but keeps it available for CSV exports.',
+      onConfirm: () => deleteReport(reportId)
+    });
   }
 
-  async function resolveEmergency(emergencyId) {
-    if (!window.confirm('Mark this emergency as resolved?')) return;
+  const resolveEmergency = useCallback(async (emergencyId) => {
+    const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
+    const headers = {};
+    if (adminPassword) headers['x-admin-password'] = adminPassword;
+
     try {
-      await API.patch(`/emergency/${emergencyId}/resolve`);
+      await API.patch(`/emergency/${emergencyId}/resolve`, {}, { headers });
+      notifySuccess('Emergency marked as resolved.');
       loadEmergencies();
     } catch (err) {
       console.error('Resolve emergency error:', err);
-      alert('Failed to resolve emergency');
+      const message = err.response?.data?.error || err.response?.data?.message || 'Failed to resolve emergency';
+      notifyError(message);
     }
+  }, [loadEmergencies, notifyError, notifySuccess]);
+
+  function confirmResolveEmergency(emergencyId) {
+    setConfirmDialog({
+      title: 'Resolve emergency?',
+      message: 'Mark this emergency as resolved for all users?',
+      onConfirm: () => resolveEmergency(emergencyId)
+    });
   }
 
   function getTimeDate(filter) {
@@ -174,7 +199,7 @@ export default function AdminPanel() {
       });
       
       if (!response.ok) {
-        alert('Failed to export CSV. Check your admin password.');
+        notifyError('Failed to export CSV. Check your admin password.');
         return;
       }
       
@@ -187,9 +212,10 @@ export default function AdminPanel() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+      notifySuccess('CSV export ready. Download should begin shortly.');
     } catch (err) {
       console.error('CSV download error:', err);
-      alert('Failed to download CSV');
+      notifyError('Failed to download CSV');
     }
   }
 
@@ -520,7 +546,7 @@ export default function AdminPanel() {
                     <div className="d-flex justify-content-end border-top pt-3">
                       <button 
                         className="btn btn-success w-100" 
-                        onClick={() => resolveEmergency(e.id)}
+                        onClick={() => confirmResolveEmergency(e.id)}
                       >
                         <CheckCircle size={16} className="me-2" /> Mark Resolved
                       </button>
@@ -534,11 +560,11 @@ export default function AdminPanel() {
       )}
       
       <ConfirmModal 
-        open={confirmOpen} 
-        title="REMOVE REPORT FROM MAP"
-        message="This will remove the pin from the map but keep the report archived in the database for CSV export logs. The report data will still be accessible for historical records. Continue?"
-        onCancel={() => setConfirmOpen(false)} 
-        onConfirm={performDelete} 
+        open={!!confirmDialog} 
+        title={confirmDialog?.title || 'Please Confirm'}
+        message={confirmDialog?.message || ''}
+        onCancel={closeConfirmDialog} 
+        onConfirm={executeConfirmAction} 
       />
       <Lightbox 
         open={!!lightboxSrc} 

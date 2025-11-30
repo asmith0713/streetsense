@@ -18,6 +18,7 @@ import './index.css';
 
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { NotificationProvider } from './components/NotificationProvider';
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '236637181211-66567rahq1a8samle5q40q6po87j6up6.apps.googleusercontent.com';
 
@@ -25,9 +26,11 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <NotificationProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </NotificationProvider>
     </GoogleOAuthProvider>
   </React.StrictMode>
 );

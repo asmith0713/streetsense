@@ -214,6 +214,8 @@ router.patch('/:id/resolve', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
+    const adminPassword = req.headers['x-admin-password'];
+    const hasAdminOverride = adminPassword && adminPassword === process.env.ADMIN_PASSWORD;
 
     const emergency = await Emergency.findById(id);
 
@@ -221,8 +223,8 @@ router.patch('/:id/resolve', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Emergency not found' });
     }
 
-    // Only creator can resolve (or admin)
-    if (emergency.userId && emergency.userId !== userId && !req.user?.isAdmin) {
+    // Only creator can resolve (or admin via JWT/admin password override)
+    if (!hasAdminOverride && emergency.userId && emergency.userId !== userId && !req.user?.isAdmin) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 

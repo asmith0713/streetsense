@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Phone, ShieldAlert, HeartPulse, Eye, X, MapPin, Loader2 } from 'lucide-react';
+import { AlertTriangle, Phone, ShieldAlert, HeartPulse, Eye, X, Loader2 } from 'lucide-react';
 import API from '../api';
 
 export default function EmergencyButton({ userLocation, onEmergencyCreated, onLocationRequest }) {

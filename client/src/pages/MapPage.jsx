@@ -19,6 +19,7 @@ import CrowdHeatmapLayer from '../components/CrowdHeatmapLayer';
 import CrowdLegend from '../components/CrowdLegend';
 import EmergencyButton from '../components/EmergencyButton';
 import LocationPermissionGuide from '../components/LocationPermissionGuide';
+import { useNotifications } from '../components/NotificationProvider';
 
 // CSS / Leaflet Assets
 import 'leaflet/dist/leaflet.css';
@@ -94,6 +95,7 @@ function RecenterMap({ position, isTracking }) {
 
 export default function MapPage() {
   // const navigate = useNavigate();
+  const { notifySuccess, notifyError, notifyWarning } = useNotifications();
   const [reports, setReports] = useState([]);
   const [heatPoints, setHeatPoints] = useState([]);
   const [crowdPoints, setCrowdPoints] = useState([]);
@@ -492,7 +494,7 @@ export default function MapPage() {
 
   const shareLocation = async () => {
     if (!userLocation) {
-      alert('Please enable location first by clicking "Find Me" or "Live Tracking"');
+      notifyWarning('Please enable location first by clicking "Find Me" or "Live Tracking"');
       return;
     }
 
@@ -544,12 +546,12 @@ export default function MapPage() {
       // console.log('Report submitted successfully');
       await fetchData();
       setShowForm(false);
-      alert('Report submitted successfully!');
+      notifySuccess('Report submitted successfully!');
     } catch (err) {
       console.error('Submit error:', err);
       console.error('Error response:', err.response?.data);
       const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Failed to submit report. Please try again.';
-      alert(errorMsg);
+      notifyError(errorMsg);
     }
   };
 

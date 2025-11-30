@@ -21,9 +21,7 @@ function Navigation() {
     return getCookie('user_email') || localStorage.getItem('user_email') || '';
   });
   
-  const isLanding = location.pathname === '/';
   const isAuth = location.pathname === '/auth' || location.pathname === '/login' || location.pathname === '/signup'; 
-  const isMap = location.pathname === '/live' || location.pathname === '/map';
 
   // Check authentication status on mount and when storage changes
   useEffect(() => {

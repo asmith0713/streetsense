@@ -1727,3 +1727,19 @@ html {
     margin: 0.5rem;
   }
 }
+
+  .notification-stack {
+    pointer-events: none;
+  }
+
+  .notification-card {
+    border-radius: 1rem;
+    backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.95);
+    pointer-events: auto;
+  }
+
+  [data-theme="dark"] .notification-card {
+    background-color: rgba(20, 20, 30, 0.92);
+    color: #f8fafc;
+  }
