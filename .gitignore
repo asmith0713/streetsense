@@ -50,5 +50,6 @@ docker-compose.override.yml
 caddy_data/
 caddy_config/
 .docker/
+Caddyfile
 
 VULTR_DEPLOY.sh

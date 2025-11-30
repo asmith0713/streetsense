@@ -1,0 +1,18 @@
+# Sample Caddy configuration for StreetSense
+# Replace example.com with your domain or IP before deploying.
+
+http://example.com {
+    redir https://example.com{uri} permanent
+}
+
+https://example.com {
+    encode zstd gzip
+
+    @uploads path /uploads/*
+    reverse_proxy @uploads backend:5000
+
+    @backend path /api/* /auth/* /reports/* /locations/* /heat/* /emergency/*
+    reverse_proxy @backend backend:5000
+
+    reverse_proxy frontend:80
+}
