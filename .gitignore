@@ -3,6 +3,14 @@ node_modules/
 npm-debug.log
 yarn-debug.log
 yarn-error.log
+*.log
+*.tmp
+*.swp
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.iml
 
 # Env files
 .env
@@ -10,6 +18,10 @@ yarn-error.log
 .env.production
 .env.development
 .env.compose
+client/.env
+server/.env
+**/.env.local
+**/.env.development
 
 # Builds
 client/dist/
@@ -35,5 +47,8 @@ client/public/test-admin.html
 
 # Docker
 docker-compose.override.yml
+caddy_data/
+caddy_config/
+.docker/
 
 VULTR_DEPLOY.sh
