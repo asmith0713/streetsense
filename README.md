@@ -55,99 +55,71 @@ This project was developed by:
 - bcrypt (Password hashing)
 - Rate limiting & Helmet (Security)
 
-## Quick Start
-
-### Prerequisites
-- Node.js 18+ 
-- MongoDB (local or Atlas)
-- npm or yarn
-
-### Installation
-
-1. **Clone the repository**
-```bash
-cd /home/asmith/LOM/Hack\ This\ Fest/streetsense
-```
-
-2. **Configure Environment Variables**
-
-**Server configuration:**
-```bash
-cp .env.example server/.env
-```
-
-Edit `server/.env` with your values:
-```env
-MONGO_URI=mongodb://localhost:27017/streetsense
-JWT_SECRET=your-long-random-secret-key
-ADMIN_PASSWORD=your-admin-password
-CORS_ORIGIN=http://localhost:3000
-GOOGLE_CLIENT_ID=your-google-oauth-client-id  # Optional: for Google Sign-In
-```
-
-**Client configuration:**
-```bash
-cp client/.env.example client/.env
-```
-
-Edit `client/.env`:
-```env
-REACT_APP_BACKEND_URL=http://localhost:5000
-REACT_APP_GOOGLE_CLIENT_ID=your-google-oauth-client-id  # Optional: for Google Sign-In
-```
-
-**Note:** For Google OAuth setup, see [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md)
-
-3. **Install Server Dependencies**
-```bash
-cd server
-npm install
-```
-
-4. **Install Client Dependencies**
-```bash
-cd ../client
-npm install
-```
-
-### Running in Development
-
-**Terminal 1 - Start MongoDB** (if running locally):
-```bash
-mongod
-```
-
-**Terminal 2 - Start Server:**
-```bash
-cd server
-npm start
-```
-Server runs on `http://localhost:5000`
-
-**Terminal 3 - Start Client:**
-```bash
-cd client
-npm start
-```
-Client runs on `http://localhost:3000`
-
-### Running with Docker
-
-```bash
-# Build and start all services
-docker-compose up --build
-
-# Run in background
 docker-compose up -d
+## Quick Start (Docker Compose)
 
-# Stop services
-docker-compose down
+The recommended way to run StreetSense (locally or on a VM) is via Docker Compose. Everything—frontend, backend, Caddy reverse proxy—is wired up for you.
+
+### 1. Prerequisites
+- Git
+- Docker Engine + Docker Compose plugin (or `docker compose` v2)
+- A MongoDB connection string (Atlas or self-hosted)
+- Optional: A domain pointing to your VM so Caddy can issue HTTPS certificates automatically
+
+### 2. Clone & Configure
+```bash
+git clone <repo-url>
+cd streetsense
+cp .env.example .env
 ```
 
-Access:
-- Client: `http://localhost:3000`
-- Server: `http://localhost:5000`
-- MongoDB: `localhost:27017`
+Edit `.env` with real values:
+
+| Variable | Description |
+| --- | --- |
+| `MONGO_URI` | Atlas or self-hosted Mongo connection string |
+| `JWT_SECRET` | Long random string for API auth |
+| `ADMIN_PASSWORD` | Password for `/admin` panel |
+| `GOOGLE_CLIENT_ID` & `REACT_APP_GOOGLE_CLIENT_ID` | Google OAuth client (same value) |
+| `PUBLIC_HOST` | Public domain or IP served by Caddy (no protocol) |
+| `BACKEND_PUBLIC_URL` | Full URL the backend advertises (e.g. `https://street-sense.app`) |
+| `REACT_APP_BACKEND_URL` | Same URL for the React build |
+| `CORS_ORIGIN` | Comma-separated origins allowed to call the API |
+
+> `.env` is gitignored—keep the real secrets here only.
+
+### 3. Launch the stack
+```bash
+docker compose pull        # optional, grab latest images
+docker compose up -d       # start frontend, backend, Caddy
+docker compose logs -f     # tail logs during first boot
+```
+
+- Backend health check: `curl https://<PUBLIC_HOST>/api/health`
+- Frontend: visit `https://<PUBLIC_HOST>` (or `http://localhost:8080` if testing locally)
+
+### 4. DNS & HTTPS (production)
+1. Point your domain’s A (and optional `www`) record to the VM’s public IP.
+2. Ensure ports 80/443 are open through the VM firewall and cloud firewall.
+3. Caddy reads `PUBLIC_HOST` and automatically issues Let’s Encrypt certificates on first request.
+
+### 5. Common Docker Tasks
+```bash
+docker compose ps                 # show container status
+docker compose logs -f backend    # tail backend logs
+docker compose restart frontend   # restart a single service
+docker compose down               # stop/remove containers
+docker compose down -v            # stop and remove volumes (wipes uploads!)
+```
+
+### 6. Local Development (optional)
+If you prefer the classic dev workflow (separate servers):
+1. Install dependencies under `server/` and `client/` via `npm install`.
+2. Start MongoDB locally.
+3. Run `npm start` in both `server` and `client` folders.
+4. Update `.env` files accordingly (`REACT_APP_BACKEND_URL=http://localhost:5000`).
+
+The Docker stack remains the authoritative way to deploy to test/prod.
 
 ## 🛡️ Using Safety Features
 
