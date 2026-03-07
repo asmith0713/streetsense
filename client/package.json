@@ -37,8 +37,10 @@
       "react-app/jest"
     ]
   },
-  "engines": {
-    "node": "18.x"
+  "overrides": {
+    "schema-utils": "3.3.0",
+    "ajv": "6.12.6",
+    "ajv-keywords": "3.5.2"
   },
   "browserslist": {
     "production": [

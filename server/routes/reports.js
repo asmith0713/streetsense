@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 const { createObjectCsvWriter } = require('csv-writer');
 const rateLimit = require('express-rate-limit');
-const { uploadToGridFS, streamFromGridFS } = require('../utils/gridfs');
+const { uploadToR2 } = require('../utils/r2');
 
 const mutationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -128,8 +128,7 @@ router.post('/',mutationLimiter, authMiddleware, upload.single('photo'), async (
   
       let photoUrl = req.body.photoUrl || null;
       if (req.file) {
-        const gridfsId = await uploadToGridFS(req.file.buffer, req.file.originalname, req.file.mimetype);
-        photoUrl = `/api/images/${gridfsId}`;
+        photoUrl = await uploadToR2(req.file.buffer, req.file.originalname, req.file.mimetype);
       }
       const rep = new Report({
         title: title.trim(),

@@ -5,14 +5,9 @@ export function resolveImageUrl(photoUrl) {
   
   photoUrl = photoUrl.trim();
   
-  // Full URL (external images like Unsplash)
+  // Full URL (R2 images, external images like Unsplash, etc.)
   if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) {
     return photoUrl;
-  }
-  
-  // GridFS images served via /api/images/:id
-  if (photoUrl.startsWith('/api/images/')) {
-    return `${BACKEND_URL}${photoUrl}`;
   }
   
   // Legacy: Server paths for old uploads (before GridFS migration)

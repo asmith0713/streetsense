@@ -96,7 +96,6 @@ const heatRouter = require('./routes/heat');
 const authRouter = require('./routes/auth');
 const locationsRouter = require('./routes/locations');
 const emergencyRouter = require('./routes/emergency');
-const imagesRouter = require('./routes/images');
 
 // Order matters: Specific routes before general routes
 app.use('/api/reports/heat', heatRouter); 
@@ -104,7 +103,6 @@ app.use('/api/reports', reportsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/locations', locationsRouter);
 app.use('/api/emergency', emergencyRouter);
-app.use('/api/images', imagesRouter);
 
 // Serve React App in Production
 if (process.env.NODE_ENV === 'production') {
