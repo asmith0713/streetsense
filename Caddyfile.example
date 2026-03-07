@@ -8,9 +8,6 @@ http://example.com {
 https://example.com {
     encode zstd gzip
 
-    @uploads path /uploads/*
-    reverse_proxy @uploads backend:5000
-
     @backend path /api/* /auth/* /reports/* /locations/* /heat/* /emergency/*
     reverse_proxy @backend backend:5000
 

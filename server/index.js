@@ -71,20 +71,11 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 3. Static Files (Ensure directories exist to prevent crashes)
-const uploadsDir = path.join(__dirname, 'uploads');
+// 3. Static Files
 const dataDir = path.join(__dirname, 'data');
-
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-// Serve static files with CORS headers
-app.use('/uploads', (req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-}, express.static(uploadsDir, { maxAge: '1d', etag: true }));
+// Images are now served from MongoDB GridFS via /api/images/:id
 
 app.use('/data', express.static(dataDir, { maxAge: '1h', etag: true }));
 
@@ -105,6 +96,7 @@ const heatRouter = require('./routes/heat');
 const authRouter = require('./routes/auth');
 const locationsRouter = require('./routes/locations');
 const emergencyRouter = require('./routes/emergency');
+const imagesRouter = require('./routes/images');
 
 // Order matters: Specific routes before general routes
 app.use('/api/reports/heat', heatRouter); 
@@ -112,6 +104,7 @@ app.use('/api/reports', reportsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/locations', locationsRouter);
 app.use('/api/emergency', emergencyRouter);
+app.use('/api/images', imagesRouter);
 
 // Serve React App in Production
 if (process.env.NODE_ENV === 'production') {

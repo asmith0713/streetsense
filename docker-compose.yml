@@ -16,14 +16,12 @@ services:
       NODE_ENV: production
       PORT: 5000
       MONGO_URI: ${MONGO_URI}
-      JWT_SECRET: ${JWT_SECRET}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      JWT_SECRET: niteeshlovessumaiya
+      ADMIN_PASSWORD: 12qwaszx@A
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       PUBLIC_HOST: ${PUBLIC_HOST}
       CORS_ORIGIN: '${CORS_ORIGIN:-https://${PUBLIC_HOST},https://www.${PUBLIC_HOST},http://${PUBLIC_HOST},http://www.${PUBLIC_HOST},http://localhost:3000,https://localhost:3000}'
       BACKEND_PUBLIC_URL: ${BACKEND_PUBLIC_URL:-https://${PUBLIC_HOST}}
-    volumes:
-      - ./server/uploads:/app/uploads
     networks:
       - streetsense-network
     healthcheck:

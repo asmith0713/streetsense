@@ -4,9 +4,11 @@ const router = express.Router();
 const Report = require('../models/Report');
 const multer = require('multer');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { createObjectCsvWriter } = require('csv-writer');
 const rateLimit = require('express-rate-limit');
+const { uploadToGridFS, streamFromGridFS } = require('../utils/gridfs');
 
 const mutationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -16,18 +18,8 @@ const mutationLimiter = rateLimit({
 
 const authMiddleware = require('../middleware/auth');
 
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
-
-// multer setup storing in uploads/
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random()*1e9);
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, `${unique}${ext}`);
-  }
-});
+// multer setup — store in memory, then upload to MongoDB GridFS
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedMimetypes = ['image/jpeg','image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -134,7 +126,11 @@ router.post('/',mutationLimiter, authMiddleware, upload.single('photo'), async (
         return res.status(400).json({ error: 'Longitude must be between -180 and 180' });
       }
   
-      const photoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.photoUrl || null;
+      let photoUrl = req.body.photoUrl || null;
+      if (req.file) {
+        const gridfsId = await uploadToGridFS(req.file.buffer, req.file.originalname, req.file.mimetype);
+        photoUrl = `/api/images/${gridfsId}`;
+      }
       const rep = new Report({
         title: title.trim(),
         description: description.trim(),
@@ -326,7 +322,7 @@ router.post('/export', verifyAdmin, async (req, res) => {
     const reports = await Report.find(filter).lean();
 
     const fileName = `reports_export_${Date.now()}.csv`;
-    const filePath = path.join(UPLOAD_DIR, fileName);
+    const filePath = path.join(os.tmpdir(), fileName);
     
     const csvWriter = createObjectCsvWriter({
       path: filePath,

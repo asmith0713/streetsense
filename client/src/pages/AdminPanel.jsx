@@ -14,12 +14,12 @@ function resolveImageUrl(photoUrl) {
   if (!photoUrl) return null;
   photoUrl = photoUrl.trim();
   if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) return photoUrl;
+  if (photoUrl.startsWith('/api/images/')) return `${BACKEND_URL}${photoUrl}`;
   if (photoUrl.startsWith('/uploads') || photoUrl.startsWith('/api/uploads')) return `${BACKEND_URL}${photoUrl}`;
   if (photoUrl.startsWith('uploads/')) return `${BACKEND_URL}/${photoUrl}`;
   if (photoUrl.startsWith('/mnt/') || photoUrl.startsWith('/var/') || 
       photoUrl.startsWith('C:\\') || photoUrl.startsWith('D:\\') ||
       /^[A-Za-z]:[\\/]/.test(photoUrl)) {
-    // console.warn('Ignoring server file system path:', photoUrl);
     return null;
   }
   return `${BACKEND_URL}/${photoUrl.replace(/^\//, '')}`;
