@@ -36,8 +36,8 @@ services:
       context: ./client
       dockerfile: Dockerfile
       args:
-        REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL:-https://${PUBLIC_HOST}}
-        REACT_APP_GOOGLE_CLIENT_ID: ${REACT_APP_GOOGLE_CLIENT_ID:-}
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-https://${PUBLIC_HOST}}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     image: asmithreddy/streetsense-client:latest
     container_name: streetsense-frontend
     restart: unless-stopped

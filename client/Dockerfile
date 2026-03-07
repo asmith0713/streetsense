@@ -3,18 +3,16 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 
 # Accept build-time environment overrides
-ARG REACT_APP_BACKEND_URL=""
-ARG REACT_APP_GOOGLE_CLIENT_ID=""
-ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
-ENV REACT_APP_GOOGLE_CLIENT_ID=$REACT_APP_GOOGLE_CLIENT_ID
-ENV SKIP_PREFLIGHT_CHECK=true
-ENV DISABLE_ESLINT_PLUGIN=true
+ARG VITE_BACKEND_URL=""
+ARG VITE_GOOGLE_CLIENT_ID=""
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
-# Copy package files and .npmrc
-COPY package*.json .npmrc ./
+# Copy package files
+COPY package*.json ./
 
-# Clean install from lock file (strict, reproducible)
-RUN npm ci --legacy-peer-deps
+# Clean install from lock file
+RUN npm ci
 
 # Copy source code
 COPY . .

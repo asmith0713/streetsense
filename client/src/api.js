@@ -6,7 +6,7 @@ import { getCookie } from './utils/cookies';
 // Use env var or auto-detect based on current URL
 // In production with Nginx: API is at same domain (proxied via /api)
 // In development: API is at localhost:5000
-const envBackendUrl = (process.env.REACT_APP_BACKEND_URL || '').trim();
+const envBackendUrl = (import.meta.env.VITE_BACKEND_URL || '').trim();
 const hasExplicitBackend = envBackendUrl && envBackendUrl !== 'undefined' && envBackendUrl !== 'null';
 
 export const BACKEND_URL = hasExplicitBackend
