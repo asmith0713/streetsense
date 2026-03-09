@@ -835,6 +835,10 @@ export default function MapPage() {
         zoom={MAP_DEFAULT_ZOOM} 
         className="flex-grow-1 h-100 w-100 z-0" 
         zoomControl={false}
+        minZoom={3}
+        maxBoundsViscosity={1.0}
+        maxBounds={[[-90, -180], [90, 180]]}
+        worldCopyJump={false}
       >
         <MapInstanceSetter setMap={setMapInstance} />
         <RecenterMap position={userLocation} isTracking={trackingLocation} />
@@ -843,6 +847,7 @@ export default function MapPage() {
         <TileLayer 
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           attribution='&copy; OpenStreetMap'
+          noWrap={true}
         />
         
         <ZoomControl position="bottomright" />
