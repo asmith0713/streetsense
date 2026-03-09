@@ -190,8 +190,8 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
                     <>
                       <h6 className="text-start text-muted text-uppercase small fw-bold mb-3">My Contacts</h6>
                       <div className="d-grid gap-2 mb-4">
-                        {personalContacts.map((contact, idx) => (
-                          <button key={idx} onClick={() => makePhoneCall(contact.phone)} className="btn btn-outline-primary d-flex align-items-center justify-content-between p-3">
+                        {personalContacts.map((contact) => (
+                          <button key={contact.phone || contact.name} onClick={() => makePhoneCall(contact.phone)} className="btn btn-outline-primary d-flex align-items-center justify-content-between p-3">
                             <span className="d-flex align-items-center gap-2">
                               <Phone size={18} /> 
                               <span className="text-truncate" style={{maxWidth: '120px'}}>{contact.name}</span>

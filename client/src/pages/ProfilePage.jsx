@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -25,26 +25,18 @@ export default function ProfilePage() {
     ]
   });
 
-  useEffect(() => {
-    loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
       // Check for token in cookies or storage
       const token = getCookie('token') || localStorage.getItem('streetsense_token') || localStorage.getItem('token');
       if (!token) {
-        // console.warn('No authentication token found, redirecting to auth');
         navigate('/auth');
         return;
       }
 
-      // console.log('Loading profile for authenticated user...');
       const res = await API.get('/auth/me');
       const user = res.data.user;
-      // console.log('Profile loaded successfully:', user.email);
       
       setProfile({
         name: user.name || '',
@@ -58,12 +50,9 @@ export default function ProfilePage() {
           : [{ name: '', phone: '', relationship: 'family', isPrimary: true }]
       });
     } catch (err) {
-      console.error('Load profile error:', err);
-      console.error('Error response:', err.response?.data);
-      console.error('Error status:', err.response?.status);
+      console.error('Load profile error:', err.response?.status, err.response?.data?.message || err.message);
       
       if (err.response?.status === 401) {
-        // console.warn('Authentication failed (401), redirecting to auth');
         // Clear invalid tokens
         localStorage.removeItem('token');
         localStorage.removeItem('streetsense_token');
@@ -78,7 +67,11 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const handleSave = async (e) => {
     e.preventDefault();

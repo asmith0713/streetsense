@@ -14,5 +14,14 @@ export default defineConfig({
   },
   build: {
     outDir: 'build',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          maps: ['leaflet', 'react-leaflet', 'leaflet.heat', 'leaflet.markercluster'],
+          ui: ['framer-motion', 'react-bootstrap', 'lucide-react'],
+        },
+      },
+    },
   },
 });

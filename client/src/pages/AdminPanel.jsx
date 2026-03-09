@@ -175,11 +175,12 @@ export default function AdminPanel() {
         if (since) body.since = since;
       }
       
+      const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
       const response = await fetch(`${BACKEND_URL}/api/reports/export`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-password': password
+          'x-admin-password': adminPassword
         },
         body: JSON.stringify(body)
       });

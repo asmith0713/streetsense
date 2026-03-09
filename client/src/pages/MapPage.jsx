@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, ZoomControl, Circle } from 'react-leaflet';
-// import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import API from '../api';
 import {
@@ -151,7 +150,6 @@ function RecenterMap({ position, isTracking }) {
 // --- Main Component ---
 
 export default function MapPage() {
-  // const navigate = useNavigate();
   const { notifySuccess, notifyError, notifyWarning } = useNotifications();
   const [reports, setReports] = useState([]);
   const [heatPoints, setHeatPoints] = useState([]);
@@ -339,7 +337,6 @@ export default function MapPage() {
 
   const requestInitialLocation = () => {
     if (!navigator.geolocation) {
-      // console.warn('Geolocation not supported');
       setLocationError('Geolocation not supported by your browser');
       return;
     }
@@ -624,13 +621,11 @@ export default function MapPage() {
         }
       });
 
-      // console.log('Report submitted successfully');
       await fetchData();
       setShowForm(false);
       notifySuccess('Report submitted successfully!');
     } catch (err) {
-      console.error('Submit error:', err);
-      console.error('Error response:', err.response?.data);
+      console.error('Submit error:', err.response?.data?.error || err.message);
       const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Failed to submit report. Please try again.';
       notifyError(errorMsg);
     }
@@ -1029,9 +1024,7 @@ export default function MapPage() {
             mapInstance.flyTo(newLocation, MAP_TRACKING_ZOOM, { animate: true, duration: 1.5 });
           }
         }}
-        onEmergencyCreated={(data) => {
-          // console.log('Emergency created:', data);
-        }}
+        onEmergencyCreated={() => {}}
       />
 
       {showForm && formLatLng && (

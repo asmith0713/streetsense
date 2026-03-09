@@ -34,9 +34,6 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // console.warn('API request returned 401 Unauthorized');
-      // console.warn('Request URL:', error.config?.url);
-      // console.warn('Token present:', !!(getCookie('token') || localStorage.getItem('token') || localStorage.getItem('streetsense_token')));
       // Don't auto-clear tokens or redirect - let components handle it
       // This prevents false logouts when navigating to profile
     }
