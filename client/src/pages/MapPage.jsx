@@ -3,9 +3,10 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, ZoomContr
 // import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import API from '../api';
-import { 
+import {
   MapPin, Flame, Layers, Users, Share2, Crosshair, Navigation,
-  Filter, Clock, AlertTriangle, CheckCircle, Copy, MessageCircle, Smartphone
+  Filter, Clock, AlertTriangle, CheckCircle, Copy, MessageCircle, Smartphone,
+  Map as MapIcon, Sun, Moon, Satellite
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -37,6 +38,58 @@ L.Icon.Default.mergeOptions({
   iconUrl: markerIcon,
   shadowUrl: markerShadow
 });
+
+// Category colors & emoji mapping
+const CATEGORY_STYLES = {
+  safety:      { color: '#e74c3c', emoji: '🛡️', label: 'Safety' },
+  traffic:     { color: '#f39c12', emoji: '🚗', label: 'Traffic' },
+  water:       { color: '#3498db', emoji: '💧', label: 'Water' },
+  garbage:     { color: '#27ae60', emoji: '🗑️', label: 'Garbage' },
+  noise:       { color: '#9b59b6', emoji: '🔊', label: 'Noise' },
+  stray:       { color: '#e67e22', emoji: '🐕', label: 'Stray Animals' },
+  harassment:  { color: '#c0392b', emoji: '⚠️', label: 'Harassment' },
+  'eve-teasing': { color: '#e84393', emoji: '🚨', label: 'Eve-Teasing' },
+  assault:     { color: '#d63031', emoji: '🆘', label: 'Assault' },
+  stalking:    { color: '#6c5ce7', emoji: '👁️', label: 'Stalking' },
+  other:       { color: '#636e72', emoji: '📌', label: 'Other' },
+};
+
+const getCategoryIcon = (category) => {
+  const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.other;
+  const svg = `<svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="shadow" x="-20%" y="-10%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.3"/>
+      </filter>
+    </defs>
+    <path d="M16 42C16 42 30 26 30 16C30 7.16 23.84 0 16 0C8.16 0 2 7.16 2 16C2 26 16 42 16 42Z" fill="${style.color}" filter="url(#shadow)"/>
+    <circle cx="16" cy="16" r="11" fill="white"/>
+    <text x="16" y="21" text-anchor="middle" font-size="14">${style.emoji}</text>
+  </svg>`;
+  return L.divIcon({
+    html: `<div style="position:relative;width:32px;height:42px;">${svg}</div>`,
+    iconSize: [32, 42],
+    iconAnchor: [16, 42],
+    popupAnchor: [0, -42],
+    className: 'category-marker',
+  });
+};
+
+// Map tile styles
+const MAP_TILES = {
+  voyager: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+  },
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri',
+  },
+};
 
 const userLocationIcon = new L.Icon({
   iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjgiIGZpbGw9IiM0Mjg1RjQiIGZpbGwtb3BhY2l0eT0iMC4yIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjYiIGZpbGw9IiM0Mjg1RjQiLz4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMyIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cjwvc3ZnPg==',
@@ -122,6 +175,9 @@ export default function MapPage() {
   const [timeFilter, setTimeFilter] = useState('7d');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('pins');
+  const [mapStyle, setMapStyle] = useState(
+    localStorage.getItem('streetsense_map_style') || 'voyager'
+  );
   const [mapInstance, setMapInstance] = useState(null);
   const [showShareToast, setShowShareToast] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -829,6 +885,53 @@ export default function MapPage() {
         )}
       </div>
 
+      {/* --- MAP STYLE TOGGLE (bottom-right, above zoom) --- */}
+      <div
+        className="position-fixed z-3 pointer-events-auto"
+        style={{
+          right: 'calc(env(safe-area-inset-right, 0px) + 0.75rem)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 7.5rem)'
+        }}
+      >
+        <div className="glass-panel rounded-pill p-1 d-flex flex-column gap-1 shadow-lg">
+          {[
+            { key: 'voyager', icon: <Sun size={16} />, title: 'Light' },
+            { key: 'dark', icon: <Moon size={16} />, title: 'Dark' },
+            { key: 'satellite', icon: <Satellite size={16} />, title: 'Satellite' },
+          ].map(s => (
+            <button
+              key={s.key}
+              className={`btn btn-sm rounded-circle d-flex align-items-center justify-content-center p-0 ${mapStyle === s.key ? 'btn-primary text-white' : 'btn-light'}`}
+              style={{ width: '34px', height: '34px' }}
+              onClick={() => {
+                setMapStyle(s.key);
+                localStorage.setItem('streetsense_map_style', s.key);
+              }}
+              title={s.title}
+            >
+              {s.icon}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* --- REPORT STATS BADGE --- */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="position-fixed z-3 pointer-events-none"
+        style={{
+          right: 'calc(env(safe-area-inset-right, 0px) + 0.75rem)',
+          top: 'calc(env(safe-area-inset-top, 0px) + 80px)'
+        }}
+      >
+        <div className="glass-panel rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2" style={{ fontSize: '0.8rem' }}>
+          <MapPin size={14} className="text-primary" />
+          <span className="fw-bold">{reports.length}</span>
+          <span className="text-muted">reports</span>
+        </div>
+      </motion.div>
+
       {/* --- MAP --- */}
       <MapContainer 
         center={pos} 
@@ -845,8 +948,9 @@ export default function MapPage() {
         <MapClick onClick={handleMapClick} />
         
         <TileLayer 
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          attribution='&copy; OpenStreetMap'
+          key={mapStyle}
+          url={MAP_TILES[mapStyle].url}
+          attribution={MAP_TILES[mapStyle].attribution}
           noWrap={true}
         />
         
@@ -881,7 +985,7 @@ export default function MapPage() {
         )}
 
         {mode === 'pins' && reports.map(r => (
-          <Marker key={r._id} position={[r.coords[1], r.coords[0]]}>
+          <Marker key={r._id} position={[r.coords[1], r.coords[0]]} icon={getCategoryIcon(r.category)}>
             <Popup minWidth={280} maxWidth={320} className="glass-popup">
               <ReportCard report={r} onUpdated={fetchData} />
             </Popup>
