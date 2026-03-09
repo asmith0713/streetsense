@@ -152,6 +152,12 @@ export default function App() {
   const location = useLocation();
   const isMapPage = ['/map', '/live', '/reports'].includes(location.pathname);
 
+  // Apply saved theme on mount so it persists across pages
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+  }, []);
+
   return (
     <div className="app-container">
       <Navigation />

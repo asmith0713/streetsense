@@ -13,14 +13,45 @@
       "sizes": "192x192"
     },
     {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
       "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff",
-  "description": "Report and track civic issues in your neighborhood"
+  "orientation": "portrait",
+  "theme_color": "#0b5cff",
+  "background_color": "#f8fafc",
+  "description": "Report potholes, garbage, and safety issues. Track with heat maps. Vote on community issues. Emergency SOS with location sharing.",
+  "categories": ["utilities", "social", "navigation"],
+  "screenshots": [
+    {
+      "src": "logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "StreetSense Map View"
+    },
+    {
+      "src": "logo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "StreetSense Mobile View"
+    }
+  ]
 }
