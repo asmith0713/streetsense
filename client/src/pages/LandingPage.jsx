@@ -1,16 +1,36 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, useInView } from 'framer-motion';
 import './LandingPage.css';
 
+/* ── Intersection Observer hook ────────────────────── */
+function useOnScreen(ref, once = true) {
+  const [isVisible, setIsVisible] = useState(false);
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          if (once) observer.disconnect();
+        } else if (!once) {
+          setIsVisible(false);
+        }
+      },
+      { rootMargin: '-40px' }
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [ref, once]);
+  return isVisible;
+}
+
 /* ── Animated counter hook ─────────────────────────── */
-function useCountUp(end, duration = 2000, startOnView = false, ref = null) {
+function useCountUp(end, duration = 2000, ref) {
   const [count, setCount] = useState(0);
-  const inView = useInView(ref, { once: true, margin: '-50px' });
-  const started = startOnView ? inView : true;
+  const isVisible = useOnScreen(ref);
 
   useEffect(() => {
-    if (!started) return;
+    if (!isVisible) return;
     let raf;
     const start = performance.now();
     const step = (now) => {
@@ -21,7 +41,7 @@ function useCountUp(end, duration = 2000, startOnView = false, ref = null) {
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [end, duration, started]);
+  }, [end, duration, isVisible]);
 
   return count;
 }
@@ -29,53 +49,51 @@ function useCountUp(end, duration = 2000, startOnView = false, ref = null) {
 /* ── Stat card ─────────────────────────────────────── */
 function StatCard({ icon, value, suffix = '', label, delay }) {
   const ref = useRef(null);
-  const count = useCountUp(value, 2200, true, ref);
+  const count = useCountUp(value, 2200, ref);
+  const isVisible = useOnScreen(ref);
   return (
-    <motion.div
+    <div
       ref={ref}
-      className="stat-card"
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.5, delay }}
+      className={`stat-card fade-up ${isVisible ? 'visible' : ''}`}
+      style={{ transitionDelay: `${delay}s` }}
     >
       <span className="stat-icon">{icon}</span>
       <span className="stat-number">{count.toLocaleString()}{suffix}</span>
       <span className="stat-label">{label}</span>
-    </motion.div>
+    </div>
   );
 }
 
 /* ── Step card ─────────────────────────────────────── */
 function StepCard({ number, icon, title, desc, delay }) {
+  const ref = useRef(null);
+  const isVisible = useOnScreen(ref);
   return (
-    <motion.div
-      className="step-card"
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.5, delay }}
+    <div
+      ref={ref}
+      className={`step-card fade-up ${isVisible ? 'visible' : ''}`}
+      style={{ transitionDelay: `${delay}s` }}
     >
       <div className="step-number">{number}</div>
       <span className="step-icon">{icon}</span>
       <h3 className="step-title">{title}</h3>
       <p className="step-desc">{desc}</p>
-    </motion.div>
+    </div>
   );
 }
 
 /* ── Fade-up wrapper ───────────────────────────────── */
 function FadeUp({ children, delay = 0, className = '' }) {
+  const ref = useRef(null);
+  const isVisible = useOnScreen(ref);
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-40px' }}
-      transition={{ duration: 0.55, delay }}
+    <div
+      ref={ref}
+      className={`fade-up ${isVisible ? 'visible' : ''} ${className}`}
+      style={{ transitionDelay: `${delay}s` }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -125,12 +143,7 @@ export default function LandingPage() {
       <section className="hero-section">
         <div className="hero-gradient" />
         <div className="hero-grid-bg" />
-        <motion.div
-          className="hero-content"
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: 'easeOut' }}
-        >
+        <div className="hero-content hero-animate">
           <span className="hero-badge">🛡️ Community-Powered Safety</span>
           <h1 className="hero-title">
             Make Your City{' '}
@@ -148,7 +161,7 @@ export default function LandingPage() {
               View Live Map
             </Link>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* ─── STATS ────────────────────────────────── */}
@@ -249,14 +262,9 @@ export default function LandingPage() {
                   <span className="faq-chevron">{openFaq === i ? '−' : '+'}</span>
                 </button>
                 {openFaq === i && (
-                  <motion.div
-                    className="faq-answer"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    transition={{ duration: 0.25 }}
-                  >
+                  <div className="faq-answer faq-answer-animate">
                     {item.a}
-                  </motion.div>
+                  </div>
                 )}
               </div>
             </FadeUp>

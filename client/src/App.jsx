@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import MapPage from './pages/MapPage';
@@ -10,6 +10,34 @@ import { getCookie, removeCookie } from './utils/cookies';
 import './index.css';
 import './App.css';
 
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('ErrorBoundary caught:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
+          <h1 style={{ color: 'red' }}>Something went wrong</h1>
+          <pre style={{ whiteSpace: 'pre-wrap', color: '#333' }}>
+            {this.state.error?.toString()}
+            {'\n\n'}
+            {this.state.error?.stack}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -20,8 +48,18 @@ function Navigation() {
   const [userEmail, setUserEmail] = useState(() => {
     return getCookie('user_email') || localStorage.getItem('user_email') || '';
   });
+  const [scrolled, setScrolled] = useState(false);
   
-  const isAuth = location.pathname === '/auth' || location.pathname === '/login' || location.pathname === '/signup'; 
+  const isAuth = location.pathname === '/auth' || location.pathname === '/login' || location.pathname === '/signup';
+  const isLanding = location.pathname === '/';
+
+  // Scroll listener for glass navbar
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll(); // check initial position
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Check authentication status on mount and when storage changes
   useEffect(() => {
@@ -69,16 +107,26 @@ function Navigation() {
 
   if (isAuth) return null; 
 
-  // Styles for Transparent Header (All Pages)
+  // Styles for navbar — glass effect on scroll
   const navStyle = {
-    backgroundColor: 'transparent',
-    position: 'absolute',
+    position: 'fixed',
     top: 0,
     left: 0,
     right: 0,
     zIndex: 1030,
     border: 'none',
-    boxShadow: 'none'
+    transition: 'background 0.3s, box-shadow 0.3s, backdrop-filter 0.3s',
+    ...(scrolled
+      ? {
+          background: 'var(--nav-glass, rgba(255,255,255,0.82))',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          boxShadow: '0 1px 12px rgba(0,0,0,0.08)',
+        }
+      : {
+          background: 'transparent',
+          boxShadow: 'none',
+        }),
   };
 
   // Text colors - always use theme variables for dark mode compatibility
@@ -159,6 +207,7 @@ export default function App() {
   }, []);
 
   return (
+    <ErrorBoundary>
     <div className="app-container">
       <Navigation />
       <main className={`flex-grow-1 d-flex flex-column position-relative ${isMapPage ? 'overflow-hidden' : 'overflow-auto'}`}>
@@ -198,5 +247,6 @@ export default function App() {
         </Routes>
       </main>
     </div>
+    </ErrorBoundary>
   );
 }

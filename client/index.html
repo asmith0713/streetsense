@@ -19,9 +19,17 @@
     <script type="module" src="/src/index.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+          // In dev: unregister any stale service workers
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            registrations.forEach(function(r) { r.unregister(); });
+          });
+        } else {
+          // In production: register service worker
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').catch(function() {});
+          });
+        }
       }
     </script>
   </body>
