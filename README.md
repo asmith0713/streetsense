@@ -9,8 +9,6 @@ This project was developed by:
 - **Asmith Maramreddy** - [@asmith0713](https://github.com/asmith0713)
 - **Niteesh Reddy Kancharla** - [niteesh206](https://github.com/niteesh206)
 
-*A collaborative project for Hack This Fest 2025*
-
 ## 🛡️ Safety Features (Women's Safety Focus)
 
 - 👥 **Real-time Crowd Heatmap** - See where people are located for safer route planning

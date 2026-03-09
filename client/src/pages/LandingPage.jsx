@@ -44,7 +44,7 @@ export default function LandingPage() {
 
       {/* Features Section */}
       <section className="features-section">
-        <h2 className="features-title">WHAT WE BUILT</h2>
+        <h2 className="features-title">WHAT YOU CAN DO</h2>
         <div className="features-list">
           <div className="feature-item">
             <div className="feature-left">
@@ -58,10 +58,10 @@ export default function LandingPage() {
             </div>
             <div className="feature-right">
               <ul className="feature-benefits">
-                <li>Geolocation pinning with Leaflet.js</li>
-                <li>Image upload and storage</li>
-                <li>Issue categories (pothole, garbage, safety)</li>
-                <li>MongoDB backend for persistence</li>
+                <li>Tap anywhere on the map to report</li>
+                <li>Attach photo evidence instantly</li>
+                <li>11 issue categories to choose from</li>
+                <li>All reports saved and tracked</li>
               </ul>
               <Link to="/auth" className="feature-cta">Try it <span>→</span></Link>
             </div>
@@ -79,10 +79,10 @@ export default function LandingPage() {
             </div>
             <div className="feature-right">
               <ul className="feature-benefits">
-                <li>Leaflet.heat plugin integration</li>
-                <li>Real-time data aggregation</li>
-                <li>Color-coded intensity zones</li>
-                <li>Toggle layers on/off</li>
+                <li>See problem hotspots at a glance</li>
+                <li>Data updates in real-time</li>
+                <li>Color-coded severity zones</li>
+                <li>Switch between map layers</li>
               </ul>
               <Link to="/map" className="feature-cta">View map <span>→</span></Link>
             </div>
@@ -100,10 +100,10 @@ export default function LandingPage() {
             </div>
             <div className="feature-right">
               <ul className="feature-benefits">
-                <li>User location sharing via Socket.IO</li>
-                <li>Real-time position updates</li>
-                <li>Crowd density heatmap layer</li>
-                <li>Privacy-focused (no personal data)</li>
+                <li>See how many people are nearby</li>
+                <li>Live position updates</li>
+                <li>Find safer, well-populated areas</li>
+                <li>Completely anonymous — no personal data</li>
               </ul>
               <Link to="/signup" className="feature-cta">Join map <span>→</span></Link>
             </div>
@@ -122,9 +122,9 @@ export default function LandingPage() {
             <div className="feature-right">
               <ul className="feature-benefits">
                 <li>One vote per user per issue</li>
-                <li>Vote count tracked in database</li>
-                <li>Sort by votes for prioritization</li>
-                <li>Prevents fake reports</li>
+                <li>Community-driven prioritization</li>
+                <li>Most-voted issues rise to the top</li>
+                <li>Helps filter out false reports</li>
               </ul>
               <Link to="/signup" className="feature-cta">Start voting <span>→</span></Link>
             </div>
@@ -142,10 +142,10 @@ export default function LandingPage() {
             </div>
             <div className="feature-right">
               <ul className="feature-benefits">
-                <li>Share GPS coordinates instantly</li>
-                <li>Helpline numbers (Police, Fire, Ambulance)</li>
-                <li>Emergency profile with medical info</li>
-                <li>Telegram notifications to contacts</li>
+                <li>Share your GPS location instantly</li>
+                <li>Quick-dial Police, Fire, Ambulance</li>
+                <li>Store medical info & emergency contacts</li>
+                <li>Instant Telegram alerts to your contacts</li>
               </ul>
               <Link to="/account" className="feature-cta">Setup profile <span>→</span></Link>
             </div>
@@ -183,7 +183,7 @@ export default function LandingPage() {
               <li>Real-time WebSockets</li>
               <li>Geolocation API</li>
               <li>Image Upload</li>
-              {/* <li>Telegram Bot API</li> */}
+              <li>Telegram Bot API</li>
             </ul>
           </div>
         </div>
@@ -241,7 +241,7 @@ export default function LandingPage() {
             )}
           </div>
 
-          {/* <div className="faq-item">
+          <div className="faq-item">
             <button 
               className={`faq-question ${openFaq === 3 ? 'active' : ''}`}
               onClick={() => toggleFaq(3)}
@@ -255,7 +255,7 @@ export default function LandingPage() {
                 Press SOS button → your location is shared + emergency alert sent via Telegram.
               </div>
             )}
-          </div> */}
+          </div>
 
           <div className="faq-item">
             <button 
@@ -276,10 +276,10 @@ export default function LandingPage() {
 
       {/* Final CTA */}
       <section className="final-cta-section">
-        <h2 className="final-cta-title">Built for Hackathon/Buildathon</h2>
-        <p className="final-cta-subtitle">Full-stack civic reporting platform with real-time features</p>
+        <h2 className="final-cta-title">Make Your City Safer</h2>
+        <p className="final-cta-subtitle">Join thousands reporting civic issues and keeping communities safe</p>
         <Link to="/signup" className="btn-hero">
-          Try the Demo
+          Get Started Free
         </Link>
       </section>
 
