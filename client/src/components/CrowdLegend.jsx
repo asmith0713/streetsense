@@ -26,7 +26,7 @@ export default function CrowdLegend({ activeUserCount }) {
           <div 
             style={{
               height: '8px',
-              background: 'linear-gradient(to right, rgba(0,0,255,0.3), rgba(0,255,0,0.5), rgba(255,255,0,0.7), rgba(255,165,0,0.9))',
+              background: 'linear-gradient(to right, rgba(0,0,255,0.3), rgba(0,255,0,0.5), rgba(255,255,0,0.7), rgba(255,69,0,0.9), rgba(255,0,0,1))',
               borderRadius: '4px'
             }}
           />

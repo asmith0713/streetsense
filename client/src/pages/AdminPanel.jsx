@@ -1,28 +1,15 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import API, { BACKEND_URL } from '../api';
 import ConfirmModal from '../components/ConfirmModal';
 import Lightbox from '../components/Lightbox';
 import { useNotifications } from '../components/NotificationProvider';
+import { resolveImageUrl } from '../utils/imageHelper';
 import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, Flag, AlertTriangle, LogOut, Filter, Download, 
   RefreshCw, Trash2, CheckCircle, MapPin, Clock, ThumbsUp, ThumbsDown,
   Search, Archive, Image as ImageIcon
 } from 'lucide-react';
-
-function resolveImageUrl(photoUrl) {
-  if (!photoUrl) return null;
-  photoUrl = photoUrl.trim();
-  if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) return photoUrl;
-  if (photoUrl.startsWith('/uploads') || photoUrl.startsWith('/api/uploads')) return `${BACKEND_URL}${photoUrl}`;
-  if (photoUrl.startsWith('uploads/')) return `${BACKEND_URL}/${photoUrl}`;
-  if (photoUrl.startsWith('/mnt/') || photoUrl.startsWith('/var/') || 
-      photoUrl.startsWith('C:\\') || photoUrl.startsWith('D:\\') ||
-      /^[A-Za-z]:[\\/]/.test(photoUrl)) {
-    return null;
-  }
-  return `${BACKEND_URL}/${photoUrl.replace(/^\//, '')}`;
-}
 
 export default function AdminPanel() {
   const [password, setPassword] = useState(sessionStorage.getItem('streetsense_admin_pwd') || '');
@@ -60,15 +47,10 @@ export default function AdminPanel() {
         headers: { 'x-admin-password': adminPassword }
       });
       const features = res.data.features || [];
-      let allReports = features.map(f => ({ 
+      const allReports = features.map(f => ({ 
         ...(f.properties || {}), 
         coords: f.geometry?.coordinates 
       }));
-      
-      // Filter based on showDeletedReports toggle
-      if (!showDeletedReports) {
-        allReports = allReports.filter(r => r.status !== 'deleted');
-      }
       
       setReports(allReports);
     } catch (err) { 
@@ -80,7 +62,13 @@ export default function AdminPanel() {
     } finally { 
       setLoading(false); 
     }
-  }, [notifyError, showDeletedReports]);
+  }, [notifyError]);
+
+  // Client-side filtered reports based on showDeletedReports toggle
+  const filteredReports = useMemo(() => {
+    if (showDeletedReports) return reports;
+    return reports.filter(r => r.status !== 'deleted');
+  }, [reports, showDeletedReports]);
 
   const loadEmergencies = useCallback(async () => {
     try {
@@ -112,7 +100,6 @@ export default function AdminPanel() {
       sessionStorage.setItem('streetsense_admin_pwd', password);
       setAuthorized(true);
       notifySuccess('Admin access confirmed.');
-      loadReports();
     } catch (err) {
       console.error('Admin auth error:', err);
       const errorMsg = err.response?.status === 401 
@@ -257,7 +244,7 @@ export default function AdminPanel() {
             value={password} 
             onChange={e => setPassword(e.target.value)} 
             placeholder="Enter Admin Password"
-            onKeyPress={e => e.key === 'Enter' && checkPassword()}
+            onKeyDown={e => e.key === 'Enter' && checkPassword()}
           />
           <button className="btn-primary-modern w-100" onClick={checkPassword}>
             Access Panel
@@ -293,7 +280,7 @@ export default function AdminPanel() {
               <Flag size={24} />
             </div>
             <div>
-              <h3 className="h2 fw-bold mb-0">{reports.length}</h3>
+              <h3 className="h2 fw-bold mb-0">{filteredReports.length}</h3>
               <p className="text-muted small mb-0">Total Reports</p>
             </div>
           </div>
@@ -390,7 +377,7 @@ export default function AdminPanel() {
             <div className="text-center py-5">
               <div className="spinner-border text-primary"></div>
             </div>
-          ) : reports.length === 0 ? (
+          ) : filteredReports.length === 0 ? (
             <div className="text-center py-5 glass-panel">
               <div className="mb-3 text-muted opacity-50">
                 <Search size={48} />
@@ -400,7 +387,7 @@ export default function AdminPanel() {
             </div>
           ) : (
             <div className="row g-4">
-              {reports.map(r => (
+              {filteredReports.map(r => (
                 <div key={r._id} className="col-12 col-lg-6">
                   <motion.div 
                     whileHover={{ y: -2 }}

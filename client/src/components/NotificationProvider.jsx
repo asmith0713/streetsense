@@ -15,6 +15,14 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const timers = useRef({});
 
+  // Cleanup all timers on unmount
+  useEffect(() => {
+    const currentTimers = timers.current;
+    return () => {
+      Object.values(currentTimers).forEach(clearTimeout);
+    };
+  }, []);
+
   const removeNotification = useCallback((id) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
     if (timers.current[id]) {

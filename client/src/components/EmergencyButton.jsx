@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Phone, ShieldAlert, HeartPulse, Eye, X, Loader2 } from 'lucide-react';
 import API from '../api';
@@ -12,6 +12,11 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
   const [success, setSuccess] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(userLocation);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     setCurrentLocation(userLocation);
@@ -44,6 +49,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (!mountedRef.current) return;
         const { latitude, longitude } = position.coords;
         const newLocation = [latitude, longitude];
         setCurrentLocation(newLocation);
@@ -51,6 +57,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
         if (onLocationRequest) onLocationRequest(newLocation);
       },
       (err) => {
+        if (!mountedRef.current) return;
         console.error('Location error:', err);
         setError('Failed to get location. Please enable GPS.');
         setFetchingLocation(false);

@@ -64,9 +64,8 @@ export default function AuthPage() {
           headers: { 'x-admin-password': adminPassword }
         });
         sessionStorage.setItem('streetsense_admin_pwd', adminPassword);
-        showToast('Admin login successful!', 'success', 3000);
-        // console.log('Admin authentication successful');
-        navigate('/admin');
+        showToast('Admin login successful!', 'success', 2000);
+        setTimeout(() => navigate('/admin'), 600);
       } catch (err) {
         console.error('Admin auth error:', err);
         const errorMsg = err.response?.status === 401 
@@ -109,10 +108,9 @@ export default function AuthPage() {
       // Dispatch custom event to update navigation
       window.dispatchEvent(new Event('authChange'));
       
-      // console.log(`Successfully ${isLogin ? 'logged in' : 'registered'}!`);
-      // Show success and navigate to map
-      showToast(isLogin ? 'Login successful!' : 'Account created successfully!', 'success', 3000);
-      navigate('/map');
+      // Show success toast briefly before navigating
+      showToast(isLogin ? 'Login successful!' : 'Account created successfully!', 'success', 2000);
+      setTimeout(() => navigate('/map'), 600);
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Authentication failed. Please try again.';
       showToast(errorMsg, 'error');
@@ -144,9 +142,9 @@ export default function AuthPage() {
       // Dispatch custom event to update navigation
       window.dispatchEvent(new Event('authChange'));
 
-      // console.log('Successfully logged in with Google!');
-      showToast('Successfully logged in with Google!', 'success', 3000);
-      navigate('/map');
+      // Show success toast briefly before navigating
+      showToast('Successfully logged in with Google!', 'success', 2000);
+      setTimeout(() => navigate('/map'), 600);
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Google authentication failed. Please try again.';
       showToast(errorMsg, 'error');

@@ -39,7 +39,6 @@ function Navigation() {
     window.addEventListener('storage', checkAuth);
     
     // Custom event for same-tab updates
-    window.dispatchEvent(new Event('authChange')); // Trigger once to sync
     window.addEventListener('authChange', checkAuth);
 
     return () => {

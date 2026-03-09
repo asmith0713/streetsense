@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API from '../api';
 import { resolveImageUrl } from '../utils/imageHelper';
 import { ThumbsUp, ThumbsDown, Clock, Tag, Image as ImageIcon, AlertTriangle, CheckCircle } from 'lucide-react';
@@ -10,6 +10,20 @@ export default function ReportCard({ report, onUpdated }) {
   const [imageError, setImageError] = useState(false);
   const [voting, setVoting] = useState(false);
   const [userVote, setUserVote] = useState(null); // 'up', 'down', or null
+
+  // Sync vote counts when parent re-fetches data (props change)
+  const prevReportRef = useRef(report._id);
+  useEffect(() => {
+    // Always sync when vote counts change from props (parent re-fetched)
+    setUpvotes(report.upvotes || 0);
+    setDownvotes(report.downvotes || 0);
+    // Reset vote state when switching to a different report
+    if (prevReportRef.current !== report._id) {
+      setUserVote(null);
+      setImageError(false);
+      prevReportRef.current = report._id;
+    }
+  }, [report._id, report.upvotes, report.downvotes]);
 
   const imageSrc = resolveImageUrl(report.photoUrl);
 

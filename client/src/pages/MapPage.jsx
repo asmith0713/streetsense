@@ -54,7 +54,9 @@ const CATEGORY_STYLES = {
   other:       { color: '#636e72', emoji: '📌', label: 'Other' },
 };
 
+const iconCache = {};
 const getCategoryIcon = (category) => {
+  if (iconCache[category]) return iconCache[category];
   const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.other;
   const svg = `<svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -66,13 +68,15 @@ const getCategoryIcon = (category) => {
     <circle cx="16" cy="16" r="11" fill="white"/>
     <text x="16" y="21" text-anchor="middle" font-size="14">${style.emoji}</text>
   </svg>`;
-  return L.divIcon({
+  const icon = L.divIcon({
     html: `<div style="position:relative;width:32px;height:42px;">${svg}</div>`,
     iconSize: [32, 42],
     iconAnchor: [16, 42],
     popupAnchor: [0, -42],
     className: 'category-marker',
   });
+  iconCache[category] = icon;
+  return icon;
 };
 
 // Map tile styles
@@ -187,6 +191,9 @@ export default function MapPage() {
   const refreshTimerRef = useRef(null);
   const watchIdRef = useRef(null);
   const shareMenuRef = useRef(null);
+  const shareToastTimerRef = useRef(null);
+  const trackingRef = useRef(trackingLocation);
+  const mountedRef = useRef(true);
 
   const getTimeDate = (filter) => {
     const now = new Date();
@@ -265,7 +272,7 @@ export default function MapPage() {
     const lng = parseFloat(params.get('lng'));
     const zoom = parseInt(params.get('zoom')) || MAP_TRACKING_ZOOM;
 
-    if (!isNaN(lat) && !isNaN(lng)) {
+    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
       const sharedLocation = [lat, lng];
       setPos(sharedLocation);
       setSharedLocation(sharedLocation);
@@ -296,8 +303,20 @@ export default function MapPage() {
     }
   }, [userLocation, shareLocationEnabled, updateUserLocation]);
 
+  // Keep trackingRef in sync
   useEffect(() => {
-    if (!shareLocationEnabled) {
+    trackingRef.current = trackingLocation;
+  }, [trackingLocation]);
+
+  // Cleanup mountedRef on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    // Only default to true for first-time users (key doesn't exist yet)
+    if (localStorage.getItem('streetsense_share_location') === null) {
       setShareLocationEnabled(true);
       localStorage.setItem('streetsense_share_location', 'true');
     }
@@ -327,6 +346,7 @@ export default function MapPage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (!mountedRef.current) return;
         const { latitude, longitude } = position.coords;
         const newPos = [latitude, longitude];
         setUserLocation(newPos);
@@ -337,7 +357,7 @@ export default function MapPage() {
         }
       },
       (error) => {
-        // console.warn('Initial location request failed:', error.message);
+        if (!mountedRef.current) return;
         handleLocationError(error);
       },
       {
@@ -351,6 +371,7 @@ export default function MapPage() {
   useEffect(() => {
     return () => {
       if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (shareToastTimerRef.current) clearTimeout(shareToastTimerRef.current);
     };
   }, []);
 
@@ -377,30 +398,32 @@ export default function MapPage() {
   };
 
   const handleLocationSuccess = useCallback((position) => {
+    if (!mountedRef.current) return;
     const { latitude, longitude } = position.coords;
     const newPos = [latitude, longitude];
     
     setUserLocation(newPos);
     setLocationError(null);
     
-    if (trackingLocation) {
+    if (trackingRef.current) {
       setPos(newPos);
     }
-  }, [trackingLocation]);
+  }, []);
 
   const handleLocationError = useCallback((error) => {
+    if (!mountedRef.current) return;
     console.error('Location error:', error);
     const errorMsg = getLocationErrorMessage(error.code);
     setLocationError(errorMsg);
     
-    if (trackingLocation) {
+    if (trackingRef.current) {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
       setTrackingLocation(false);
     }
-  }, [trackingLocation]);
+  }, []);
 
   const getUserLocation = () => {
     if (!navigator.geolocation) {
@@ -505,7 +528,8 @@ export default function MapPage() {
       await navigator.clipboard.writeText(shareUrl);
       setShowShareToast(true);
       setShowShareMenu(false);
-      setTimeout(() => setShowShareToast(false), 3000);
+      if (shareToastTimerRef.current) clearTimeout(shareToastTimerRef.current);
+      shareToastTimerRef.current = setTimeout(() => setShowShareToast(false), 3000);
       return true;
     } catch (err) {
       // Fallback
@@ -524,7 +548,8 @@ export default function MapPage() {
         if (successful) {
           setShowShareToast(true);
           setShowShareMenu(false);
-          setTimeout(() => setShowShareToast(false), 3000);
+          if (shareToastTimerRef.current) clearTimeout(shareToastTimerRef.current);
+          shareToastTimerRef.current = setTimeout(() => setShowShareToast(false), 3000);
           return true;
         }
         return false;

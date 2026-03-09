@@ -1,17 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 import './Toast.css';
 
 export default function Toast({ message, type = 'info', onClose, duration = 5000 }) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
-        onClose();
+        onCloseRef.current();
       }, duration);
       return () => clearTimeout(timer);
     }
-  }, [duration, onClose]);
+  }, [duration]);
 
   const icons = {
     success: <CheckCircle size={20} />,

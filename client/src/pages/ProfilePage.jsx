@@ -21,7 +21,7 @@ export default function ProfilePage() {
     allergies: '',
     medicalConditions: '',
     emergencyContacts: [
-      { name: '', phone: '', relationship: 'family', isPrimary: true }
+      { _key: 'initial', name: '', phone: '', relationship: 'family', isPrimary: true }
     ]
   });
 
@@ -114,7 +114,7 @@ export default function ProfilePage() {
       ...profile,
       emergencyContacts: [
         ...profile.emergencyContacts,
-        { name: '', phone: '', relationship: 'friend', isPrimary: false }
+        { _key: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, name: '', phone: '', relationship: 'friend', isPrimary: false }
       ]
     });
   };
@@ -298,7 +298,7 @@ export default function ProfilePage() {
             
             {profile.emergencyContacts.map((contact, index) => (
               <motion.div 
-                key={index}
+                key={contact._key || contact._id || `contact-${index}`}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="glass-card p-3 mb-3 position-relative"
