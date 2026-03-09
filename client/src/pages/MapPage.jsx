@@ -5,8 +5,8 @@ import L from 'leaflet';
 import API from '../api';
 import {
   MapPin, Flame, Layers, Users, Share2, Crosshair, Navigation,
-  Filter, Clock, AlertTriangle, CheckCircle, Copy, MessageCircle, Smartphone,
-  Map as MapIcon, Sun, Moon, Satellite
+  Filter, AlertTriangle, CheckCircle, Copy, MessageCircle, Smartphone,
+  Sun, Moon, Satellite
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -616,118 +616,121 @@ export default function MapPage() {
       
       {/* --- TOP CONTROLS --- */}
       <div
-        className="position-absolute top-0 start-0 end-0 px-3 pt-3 z-3 pointer-events-none"
-        style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 60px)' }}
+        className="position-absolute top-0 start-0 end-0 px-2 px-md-3 pt-2 pt-md-3 z-3 pointer-events-none"
+        style={{ marginTop: 'calc(env(safe-area-inset-top, 0px) + 56px)' }}
       >
         <motion.div 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="glass-panel mx-auto pointer-events-auto p-2 d-flex gap-2 flex-wrap align-items-center justify-content-between shadow-lg position-relative"
+          className="glass-panel mx-auto pointer-events-auto p-2 shadow-lg map-top-controls"
           style={{ maxWidth: '900px', width: '100%' }}
         >
-          {/* Mobile Toggle for Filters */}
-          <div className="d-flex gap-2">
-            <button 
-              className="btn btn-light d-md-none"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter size={18} />
-            </button>
-          </div>
+          {/* Row 1: Mode toggles + filter toggle (always visible) */}
+          <div className="d-flex gap-2 align-items-center justify-content-between">
+            <div className="btn-group btn-group-sm shadow-sm flex-shrink-0">
+              <button className={`btn ${mode === 'pins' ? 'btn-primary' : 'btn-light'}`} onClick={() => setMode('pins')} title="Pins">
+                <MapPin size={14} /><span className="d-none d-sm-inline ms-1">Pins</span>
+              </button>
+              <button className={`btn ${mode === 'heat' ? 'btn-primary' : 'btn-light'}`} onClick={() => setMode('heat')} title="Heatmap">
+                <Flame size={14} /><span className="d-none d-sm-inline ms-1">Heat</span>
+              </button>
+              <button className={`btn ${mode === 'cluster' ? 'btn-primary' : 'btn-light'}`} onClick={() => setMode('cluster')} title="Clusters">
+                <Layers size={14} /><span className="d-none d-sm-inline ms-1">Cluster</span>
+              </button>
+            </div>
 
-          {/* Filters */}
-          <div
-            className={`gap-2 flex-grow-1 flex-wrap align-items-center ${
-              showFilters
-                ? 'd-flex flex-column flex-sm-row w-100 mt-2 order-last'
-                : 'd-none d-md-flex'
-            }`}
-          >
-            <div className="input-group input-group-sm" style={{maxWidth: '180px'}}>
-              <span className="input-group-text input-group-bg border-end-0"><Filter size={14} /></span>
-              <select 
-                className="form-select border-start-0 shadow-none" 
-                value={categoryFilter} 
-                onChange={e => setCategoryFilter(e.target.value)}
+            <div className="d-flex gap-1 align-items-center flex-shrink-0">
+              <button 
+                className={`btn btn-sm d-flex align-items-center justify-content-center gap-1 ${showCrowdHeatmap ? 'btn-success text-white' : 'btn-outline-success'}`}
+                onClick={() => {
+                  const newValue = !showCrowdHeatmap;
+                  setShowCrowdHeatmap(newValue);
+                  localStorage.setItem('streetsense_crowd_heatmap', newValue.toString());
+                }}
+                title={showCrowdHeatmap ? 'Hide Crowd' : 'Show Crowd'}
               >
-                <option value="all">All Categories</option>
-                <option value="safety">Safety</option>
-                <option value="traffic">Traffic</option>
-                <option value="water">Water</option>
-                <option value="garbage">Garbage</option>
-                <option value="noise">Noise</option>
-                <option value="stray">Stray Animals</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            
-            <div className="input-group input-group-sm" style={{maxWidth: '150px'}}>
-              <span className="input-group-text input-group-bg border-end-0"><Clock size={14} /></span>
-              <select 
-                className="form-select border-start-0 shadow-none"  
-                value={timeFilter} 
-                onChange={e => setTimeFilter(e.target.value)}
+                <Users size={14} />
+                <span className="d-none d-lg-inline">{showCrowdHeatmap ? 'Hide' : 'Show'} Crowd</span>
+              </button>
+              
+              <button 
+                className={`btn btn-sm d-flex align-items-center justify-content-center gap-1 position-relative ${shareLocationEnabled ? 'btn-info text-white' : 'btn-outline-info'}`}
+                onClick={() => {
+                  const newValue = !shareLocationEnabled;
+                  setShareLocationEnabled(newValue);
+                  localStorage.setItem('streetsense_share_location', newValue.toString());
+                  if (newValue && userLocation) {
+                    const [lat, lng] = userLocation;
+                    updateUserLocation(lat, lng);
+                  }
+                }}
+                title={shareLocationEnabled ? 'Stop Broadcasting' : 'Broadcast Location'}
               >
-                <option value="24h">Last 24h</option>
-                <option value="7d">Last 7 Days</option>
-                <option value="30d">Last 30 Days</option>
-                <option value="all">All Time</option>
-              </select>
-            </div>
-
-            {loading && <div className="spinner-border spinner-border-sm text-primary" role="status"></div>}
-          </div>
-
-          {/* Mode Toggles */}
-          <div className="d-flex gap-2 align-items-center flex-wrap ms-auto">
-            <div className="btn-group btn-group-sm shadow-sm">
-              <button className={`btn ${mode === 'pins' ? 'btn-primary' : 'btn-light'}`} onClick={() => setMode('pins')}>
-                <MapPin size={14} className="me-1" /> Pins
-              </button>
-              <button className={`btn ${mode === 'heat' ? 'btn-primary' : 'btn-light'}`} onClick={() => setMode('heat')}>
-                <Flame size={14} className="me-1" /> Heat
-              </button>
-              <button className={`btn ${mode === 'cluster' ? 'btn-primary' : 'btn-light'}`} onClick={() => setMode('cluster')}>
-                <Layers size={14} className="me-1" /> Cluster
-              </button>
-            </div>
-            
-            <button 
-              className={`btn btn-sm d-flex align-items-center gap-1 ${showCrowdHeatmap ? 'btn-success text-white' : 'btn-outline-success'}`}
-              onClick={() => {
-                const newValue = !showCrowdHeatmap;
-                setShowCrowdHeatmap(newValue);
-                localStorage.setItem('streetsense_crowd_heatmap', newValue.toString());
-              }}
-            >
-              <Users size={14} />
-              <span className="d-none d-sm-inline">{showCrowdHeatmap ? 'Hide' : 'Show'} Crowd</span>
-            </button>
-            
-            <button 
-              className={`btn btn-sm d-flex align-items-center gap-1 position-relative ${shareLocationEnabled ? 'btn-info text-white' : 'btn-outline-info'}`}
-              onClick={() => {
-                const newValue = !shareLocationEnabled;
-                setShareLocationEnabled(newValue);
-                localStorage.setItem('streetsense_share_location', newValue.toString());
-                if (newValue && userLocation) {
-                  const [lat, lng] = userLocation;
-                  updateUserLocation(lat, lng);
-                }
-              }}
-            >
-              <Share2 size={14} />
-              <span className="d-none d-sm-inline">{shareLocationEnabled ? 'Broadcasting' : 'Broadcast'}</span>
-              {shareLocationEnabled && (
-                <span className="position-absolute top-0 start-100 translate-middle p-1">
-                  <span className="position-relative d-flex h-100 w-100">
-                    <span className="animate-ping position-absolute d-inline-flex h-100 w-100 rounded-circle bg-success opacity-75"></span>
-                    <span className="position-relative d-inline-flex rounded-circle h-100 w-100 bg-success" style={{width: '8px', height: '8px'}}></span>
+                <Share2 size={14} />
+                <span className="d-none d-lg-inline">{shareLocationEnabled ? 'Live' : 'Broadcast'}</span>
+                {shareLocationEnabled && (
+                  <span className="position-absolute top-0 start-100 translate-middle badge-pulse">
+                    <span className="pulse-dot bg-success"></span>
                   </span>
-                </span>
-              )}
-            </button>
+                )}
+              </button>
+
+              <button 
+                className={`btn btn-sm btn-light d-flex align-items-center justify-content-center ${showFilters ? 'text-primary' : ''}`}
+                onClick={() => setShowFilters(!showFilters)}
+                title="Filters"
+              >
+                <Filter size={14} />
+              </button>
+
+              {loading && <div className="spinner-border spinner-border-sm text-primary" role="status"></div>}
+            </div>
           </div>
+
+          {/* Row 2: Filters (collapsible) */}
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="d-flex gap-2 mt-2 flex-wrap">
+                  <select 
+                    className="form-select form-select-sm flex-grow-1" 
+                    style={{ minWidth: '130px', maxWidth: '200px' }}
+                    value={categoryFilter} 
+                    onChange={e => setCategoryFilter(e.target.value)}
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="safety">🛡️ Safety</option>
+                    <option value="traffic">🚗 Traffic</option>
+                    <option value="water">💧 Water</option>
+                    <option value="garbage">🗑️ Garbage</option>
+                    <option value="noise">🔊 Noise</option>
+                    <option value="stray">🐕 Stray Animals</option>
+                    <option value="harassment">⚠️ Harassment</option>
+                    <option value="eve-teasing">🚨 Eve-Teasing</option>
+                    <option value="stalking">👁️ Stalking</option>
+                    <option value="other">📌 Other</option>
+                  </select>
+                  
+                  <select 
+                    className="form-select form-select-sm flex-grow-1"
+                    style={{ minWidth: '110px', maxWidth: '160px' }}
+                    value={timeFilter} 
+                    onChange={e => setTimeFilter(e.target.value)}
+                  >
+                    <option value="24h">Last 24h</option>
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                    <option value="all">All Time</option>
+                  </select>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
 
@@ -752,32 +755,26 @@ export default function MapPage() {
 
       <LocationPermissionGuide show={showLocationGuide} onClose={() => setShowLocationGuide(false)} />
 
-      {/* --- LOCATION BROADCASTING INFO --- */}
+      {/* --- LOCATION BROADCASTING INFO (compact) --- */}
       <AnimatePresence>
         {shareLocationEnabled && userLocation && (
           <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="position-fixed bottom-0 start-0 m-3 z-3 pointer-events-auto" 
-            style={{maxWidth: '300px'}}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="position-fixed z-3 pointer-events-auto d-none d-md-block" 
+            style={{
+              left: 'calc(env(safe-area-inset-left, 0px) + 4.5rem)',
+              bottom: 'calc(env(safe-area-inset-bottom, 0px) + 2.75rem)',
+            }}
           >
-            <div className="glass-panel p-3 border-success bg-success bg-opacity-10 position-relative">
-              <button className="btn-close position-absolute top-0 end-0 m-2 small" onClick={() => {
+            <div className="glass-panel px-3 py-2 rounded-pill d-flex align-items-center gap-2 border-success bg-success bg-opacity-10 shadow-sm">
+              <span className="pulse-dot bg-success"></span>
+              <span className="fw-bold text-success small">Broadcasting</span>
+              <button className="btn-close small ms-1" style={{ fontSize: '0.6rem' }} onClick={() => {
                 setShareLocationEnabled(false);
                 localStorage.setItem('streetsense_share_location', 'false');
               }}></button>
-              <div className="d-flex align-items-start gap-2">
-                <div className="bg-success text-white rounded-circle p-1 mt-1">
-                  <Share2 size={14} />
-                </div>
-                <div>
-                  <div className="fw-bold text-success small">Broadcasting Location</div>
-                  <div className="text-muted small" style={{fontSize: '0.75rem'}}>
-                    Your location is visible on the Safety Map to help others.
-                  </div>
-                </div>
-              </div>
             </div>
           </motion.div>
         )}
@@ -802,33 +799,31 @@ export default function MapPage() {
 
       {/* --- BOTTOM LEFT CONTROLS --- */}
       <div
-        className="position-fixed z-3 d-flex flex-column gap-2 pointer-events-none"
+        className="position-fixed z-3 d-flex flex-column gap-2 pointer-events-none map-bottom-left-controls"
         style={{
-          left: 'calc(env(safe-area-inset-left, 0px) + 1.25rem)',
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 2.75rem)'
+          left: 'calc(env(safe-area-inset-left, 0px) + 0.75rem)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)'
         }}
       >
         <div className="pointer-events-auto d-flex flex-column gap-2">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="btn glass-panel p-0 rounded-circle d-flex align-items-center justify-content-center text-primary"
-            style={{width: '48px', height: '48px'}}
+            className="btn glass-panel p-0 rounded-circle d-flex align-items-center justify-content-center text-primary map-fab-btn"
             onClick={getUserLocation}
             title="Find Me"
           >
-            <Crosshair size={24} />
+            <Crosshair size={20} />
           </motion.button>
 
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`btn glass-panel p-0 rounded-circle d-flex align-items-center justify-content-center ${trackingLocation ? 'bg-primary text-white border-primary' : 'text-primary'}`}
-            style={{width: '48px', height: '48px'}}
+            className={`btn glass-panel p-0 rounded-circle d-flex align-items-center justify-content-center map-fab-btn ${trackingLocation ? 'bg-primary text-white border-primary' : 'text-primary'}`}
             onClick={toggleTracking}
             title={trackingLocation ? "Stop tracking" : "Start live tracking"}
           >
-            <Navigation size={24} className={trackingLocation ? 'fill-current' : ''} />
+            <Navigation size={20} className={trackingLocation ? 'fill-current' : ''} />
           </motion.button>
 
           {userLocation && (
@@ -836,12 +831,11 @@ export default function MapPage() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="btn glass-panel p-0 rounded-circle d-flex align-items-center justify-content-center text-body"
-                style={{width: '48px', height: '48px'}}
+                className="btn glass-panel p-0 rounded-circle d-flex align-items-center justify-content-center text-body map-fab-btn"
                 onClick={shareLocation}
                 title="Share location"
               >
-                <Share2 size={20} />
+                <Share2 size={18} />
               </motion.button>
 
               <AnimatePresence>
@@ -851,9 +845,9 @@ export default function MapPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
                     className="position-absolute start-100 bottom-0 ms-2 glass-panel p-2"
-                    style={{ minWidth: '200px', zIndex: 1050 }}
+                    style={{ minWidth: '180px', zIndex: 1050 }}
                   >
-                    <div className="text-muted small fw-bold px-2 py-1 mb-1 text-uppercase">Share Location</div>
+                    <div className="text-muted small fw-bold px-2 py-1 mb-1 text-uppercase" style={{ fontSize: '0.65rem' }}>Share Location</div>
                     
                     <button className="btn btn-sm btn-light w-100 text-start d-flex align-items-center gap-2 mb-1" onClick={() => copyToClipboard(shareUrl)}>
                       <Copy size={14} className="text-primary" /> Copy Link
@@ -877,32 +871,28 @@ export default function MapPage() {
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="glass-panel px-3 py-2 d-flex align-items-center gap-2 text-primary fw-bold small"
+            className="glass-panel px-2 py-1 d-flex align-items-center gap-2 text-primary fw-bold map-tracking-badge"
           >
             <span className="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>
-            Live Tracking
+            <span className="d-none d-sm-inline">Live Tracking</span>
+            <span className="d-sm-none" style={{ fontSize: '0.7rem' }}>Live</span>
           </motion.div>
         )}
       </div>
 
       {/* --- MAP STYLE TOGGLE (bottom-right, above zoom) --- */}
       <div
-        className="position-fixed z-3 pointer-events-auto"
-        style={{
-          right: 'calc(env(safe-area-inset-right, 0px) + 0.75rem)',
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 7.5rem)'
-        }}
+        className="position-fixed z-3 pointer-events-auto map-style-toggle"
       >
         <div className="glass-panel rounded-pill p-1 d-flex flex-column gap-1 shadow-lg">
           {[
-            { key: 'voyager', icon: <Sun size={16} />, title: 'Light' },
-            { key: 'dark', icon: <Moon size={16} />, title: 'Dark' },
-            { key: 'satellite', icon: <Satellite size={16} />, title: 'Satellite' },
+            { key: 'voyager', icon: <Sun size={14} />, title: 'Light' },
+            { key: 'dark', icon: <Moon size={14} />, title: 'Dark' },
+            { key: 'satellite', icon: <Satellite size={14} />, title: 'Satellite' },
           ].map(s => (
             <button
               key={s.key}
-              className={`btn btn-sm rounded-circle d-flex align-items-center justify-content-center p-0 ${mapStyle === s.key ? 'btn-primary text-white' : 'btn-light'}`}
-              style={{ width: '34px', height: '34px' }}
+              className={`btn btn-sm rounded-circle d-flex align-items-center justify-content-center p-0 map-style-btn ${mapStyle === s.key ? 'btn-primary text-white' : 'btn-light'}`}
               onClick={() => {
                 setMapStyle(s.key);
                 localStorage.setItem('streetsense_map_style', s.key);
@@ -919,16 +909,12 @@ export default function MapPage() {
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="position-fixed z-3 pointer-events-none"
-        style={{
-          right: 'calc(env(safe-area-inset-right, 0px) + 0.75rem)',
-          top: 'calc(env(safe-area-inset-top, 0px) + 80px)'
-        }}
+        className="position-fixed z-3 pointer-events-none map-stats-badge"
       >
-        <div className="glass-panel rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2" style={{ fontSize: '0.8rem' }}>
-          <MapPin size={14} className="text-primary" />
+        <div className="glass-panel rounded-pill px-2 py-1 shadow-sm d-flex align-items-center gap-1" style={{ fontSize: '0.75rem' }}>
+          <MapPin size={12} className="text-primary" />
           <span className="fw-bold">{reports.length}</span>
-          <span className="text-muted">reports</span>
+          <span className="text-muted d-none d-sm-inline">reports</span>
         </div>
       </motion.div>
 
