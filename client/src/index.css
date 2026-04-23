@@ -345,6 +345,24 @@ code {
   background: var(--primary);
 }
 
+/* Hide scrollbars on mobile devices while keeping scroll functionality */
+@media (max-width: 768px) {
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Firefox */
+  * {
+    scrollbar-width: none;
+  }
+  
+  /* IE and Edge */
+  * {
+    -ms-overflow-style: none;
+  }
+}
+
 .loading-overlay {
   position: fixed;
   top: 0;
