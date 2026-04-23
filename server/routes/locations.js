@@ -14,10 +14,10 @@ const locationUpdateLimiter = rateLimit({
 // POST /api/locations - Update user's current location
 router.post('/', locationUpdateLimiter, authMiddleware, async (req, res) => {
   try {
-    const { lat, lng, accuracy } = req.body;
+    const { lat, lng, accuracy, deviceId } = req.body;
 
-    if (!lat || !lng) {
-      return res.status(400).json({ error: 'Latitude and longitude required' });
+    if (!lat || !lng || !deviceId) {
+      return res.status(400).json({ error: 'Latitude, longitude, and deviceId required' });
     }
 
     const latitude = parseFloat(lat);
@@ -34,17 +34,17 @@ router.post('/', locationUpdateLimiter, authMiddleware, async (req, res) => {
 
     const userId = req.user?.id || null;
 
-    // Deactivate old locations for this user
-    if (userId) {
-      await UserLocation.updateMany(
-        { userId, isActive: true },
-        { isActive: false }
-      );
-    }
+    // Deactivate old locations ONLY for this specific device
+    // This allows multiple devices per user to remain active
+    await UserLocation.updateMany(
+      { userId, deviceId, isActive: true },
+      { isActive: false }
+    );
 
     // Create new location
     const userLocation = new UserLocation({
       userId,
+      deviceId,
       location: {
         type: 'Point',
         coordinates: [longitude, latitude]
@@ -149,12 +149,23 @@ router.get('/stats', async (req, res) => {
 router.delete('/mine', authMiddleware, async (req, res) => {
   try {
     const userId = req.user?.id;
+    const { deviceId } = req.body;
 
     if (userId) {
-      await UserLocation.updateMany(
-        { userId },
-        { isActive: false }
-      );
+      // Only deactivate locations for specific device if deviceId provided
+      if (deviceId) {
+        await UserLocation.updateMany(
+          { userId, deviceId },
+          { isActive: false }
+        );
+      } else {
+        // Otherwise deactivate all devices for this user
+        // (used during logout)
+        await UserLocation.updateMany(
+          { userId },
+          { isActive: false }
+        );
+      }
     }
 
     res.json({ success: true, message: 'Location removed from map' });

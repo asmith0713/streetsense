@@ -6,6 +6,11 @@ const UserLocationSchema = new mongoose.Schema({
     required: false, // Can be null for anonymous users
     index: true 
   },
+  deviceId: {
+    type: String,
+    required: true, // Unique identifier for each device/browser
+    index: true
+  },
   location: {
     type: {
       type: String,
@@ -38,5 +43,8 @@ UserLocationSchema.index({ location: '2dsphere' });
 
 // Compound index for active location queries
 UserLocationSchema.index({ isActive: 1, timestamp: -1 });
+
+// Index for device tracking
+UserLocationSchema.index({ userId: 1, deviceId: 1 });
 
 module.exports = mongoose.model('UserLocation', UserLocationSchema);
