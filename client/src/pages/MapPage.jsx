@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, ZoomControl, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import API from '../api';
+import { getDeviceId } from '../utils/deviceId';
 import {
   MapPin, Flame, Layers, Users, Share2, Crosshair, Navigation,
   Filter, AlertTriangle, CheckCircle, Copy, MessageCircle, Smartphone,
@@ -248,7 +249,8 @@ export default function MapPage() {
   const updateUserLocation = useCallback(async (lat, lng, accuracy = 100) => {
     if (!shareLocationEnabled) return;
     try {
-      await API.post('/locations', { lat, lng, accuracy });
+      const deviceId = getDeviceId();
+      await API.post('/locations', { lat, lng, accuracy, deviceId });
     } catch (err) {
       console.error('Location update error:', err);
     }

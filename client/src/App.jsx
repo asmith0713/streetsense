@@ -7,6 +7,7 @@ import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import { getCookie, removeCookie } from './utils/cookies';
+import API from './api';
 import './index.css';
 import './App.css';
 
@@ -85,7 +86,14 @@ function Navigation() {
     };
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Deactivate all locations for this user (logout cleanup)
+    try {
+      await API.delete('/locations/mine', { data: {} });
+    } catch (err) {
+      console.error('Failed to deactivate locations on logout:', err);
+    }
+
     // Clear all authentication tokens
     removeCookie('token');
     removeCookie('user_id');

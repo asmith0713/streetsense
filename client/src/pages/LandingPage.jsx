@@ -167,9 +167,9 @@ export default function LandingPage() {
       {/* ─── STATS ────────────────────────────────── */}
       <section className="stats-section">
         <div className="stats-grid">
-          <StatCard icon="📍" value={500} suffix="+" label="Issues Reported" delay={0} />
-          <StatCard icon="👥" value={1200} suffix="+" label="Active Citizens" delay={0.1} />
-          <StatCard icon="✅" value={340} suffix="+" label="Issues Resolved" delay={0.2} />
+          <StatCard icon="📍" value={100} suffix="+" label="Issues Reported" delay={0} />
+          <StatCard icon="👥" value={20} suffix="+" label="Active Citizens" delay={0.1} />
+          <StatCard icon="✅" value={140} suffix="+" label="Issues Resolved" delay={0.2} />
           <StatCard icon="🏙️" value={25} suffix="+" label="Cities Covered" delay={0.3} />
         </div>
       </section>
@@ -202,7 +202,7 @@ export default function LandingPage() {
             { icon: '👥', title: 'Live Crowd Tracking', desc: 'See active users in real-time. Find safer, well-populated areas.', link: '/signup', cta: 'Join map' },
             { icon: '👍', title: 'Voting System', desc: 'Upvote issues to prioritise them. Community-driven decision making.', link: '/signup', cta: 'Start voting' },
             { icon: '🚨', title: 'Emergency SOS', desc: 'One-click emergency with GPS sharing, quick-dial, and Telegram alerts.', link: '/account', cta: 'Setup SOS' },
-            { icon: '🔔', title: 'Instant Alerts', desc: 'Telegram notifications for emergencies. Keep your contacts informed.', link: '/signup', cta: 'Get alerts' },
+            // { icon: '🔔', title: 'Instant Alerts', desc: 'Telegram notifications for emergencies. Keep your contacts informed.', link: '/signup', cta: 'Get alerts' },
           ].map((f, i) => (
             <FadeUp key={i} delay={i * 0.08}>
               <div className="feature-card">
@@ -225,7 +225,7 @@ export default function LandingPage() {
           {[
             { icon: '🔒', title: 'Anonymous Reports', desc: 'No personal data attached to any report' },
             { icon: '🌐', title: 'Open Source', desc: 'Transparent code anyone can inspect' },
-            { icon: '📱', title: 'Works Offline', desc: 'Installable PWA with offline support' },
+            // { icon: '📱', title: 'Works Offline', desc: 'Installable PWA with offline support' },
             { icon: '⚡', title: 'Real-Time', desc: 'WebSocket-powered live updates' },
           ].map((b, i) => (
             <FadeUp key={i} delay={i * 0.08}>
@@ -307,7 +307,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; {new Date().getFullYear()} StreetSense. All rights reserved.</p>
+          {/* <p>&copy; {new Date().getFullYear()} StreetSense. All rights reserved.</p> */}
         </div>
       </footer>
     </div>
