@@ -16,8 +16,15 @@ router.post('/', locationUpdateLimiter, authMiddleware, async (req, res) => {
   try {
     const { lat, lng, accuracy, deviceId } = req.body;
 
-    if (!lat || !lng || !deviceId) {
-      return res.status(400).json({ error: 'Latitude, longitude, and deviceId required' });
+    console.log('Location update received:', { lat, lng, accuracy, deviceId, userId: req.user?.id });
+
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'Latitude and longitude required' });
+    }
+
+    if (!deviceId) {
+      console.warn('Missing deviceId in location update');
+      return res.status(400).json({ error: 'Device ID required' });
     }
 
     const latitude = parseFloat(lat);
@@ -36,10 +43,11 @@ router.post('/', locationUpdateLimiter, authMiddleware, async (req, res) => {
 
     // Deactivate old locations ONLY for this specific device
     // This allows multiple devices per user to remain active
-    await UserLocation.updateMany(
+    const updated = await UserLocation.updateMany(
       { userId, deviceId, isActive: true },
       { isActive: false }
     );
+    console.log('Deactivated old locations:', updated.modifiedCount);
 
     // Create new location
     const userLocation = new UserLocation({
@@ -54,6 +62,8 @@ router.post('/', locationUpdateLimiter, authMiddleware, async (req, res) => {
     });
 
     await userLocation.save();
+
+    console.log('New location saved:', userLocation._id);
 
     res.json({ 
       success: true, 

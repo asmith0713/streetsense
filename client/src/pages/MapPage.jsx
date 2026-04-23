@@ -250,9 +250,11 @@ export default function MapPage() {
     if (!shareLocationEnabled) return;
     try {
       const deviceId = getDeviceId();
-      await API.post('/locations', { lat, lng, accuracy, deviceId });
+      console.log('📍 Updating location:', { lat, lng, accuracy, deviceId });
+      const res = await API.post('/locations', { lat, lng, accuracy, deviceId });
+      console.log('✅ Location saved:', res.data);
     } catch (err) {
-      console.error('Location update error:', err);
+      console.error('❌ Location update error:', err.response?.data || err.message);
     }
   }, [shareLocationEnabled]);
 
