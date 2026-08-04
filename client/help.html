@@ -1,0 +1,63 @@
+<html>
+  <body>
+    <p>
+      do {
+            switch (animalChoiceMenu(keyboard)) {
+                case 1:
+                    do {
+                        System.out.println("The animal which is chosen is : "+ tigerObject.getNameOfAnimal());
+                        // get menu choice
+                        switch (menuChoice) {
+                            case 1:
+                                
+                                break;
+
+                            case 2:
+                                break;
+                            case 3:
+                                break;
+                            case 4:
+                                break;
+                            default:
+                                System.out.println("Not supported");
+
+                        }
+                        System.out.println("Continue with this animal ? (Enter 1 for yes/ 2 for no):");
+                        continueInnerLoop = keyboard.nextInt();
+                    } while(continueInnerLoop == 1);
+
+                    break;
+                case 2:
+                    do {
+                        System.out.println("The animal which is chosen is : "+ dolphinObject.getNameOfAnimal());
+                        // get menu choice
+                        switch (menuChoice) {
+                            case 1:
+                                break;
+
+                            case 2:
+                                break;
+                            case 3:
+                                break;
+                            case 4:
+                                break;
+                            default:
+                                System.out.println("Not supported");
+
+                        }
+                        System.out.println("Continue with this animal ? (Enter 1 for yes/ 2 for no):");
+                        continueInnerLoop = keyboard.nextInt();
+                    } while(continueInnerLoop == 1);
+                    break;
+
+                default:
+                    System.out.println("Sorry no such animal available.");
+            }
+
+            System.out.println("Continue main Zoo menu? (Enter 1 for yes/ 2 for no):");
+            continueOuterLoop = keyboard.nextInt();
+
+        } while(continueOuterLoop == 1);
+    </p>
+  </body>
+</html>
