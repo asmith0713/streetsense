@@ -19,7 +19,11 @@ import './index.css';
 import App from './App';
 import { NotificationProvider } from './components/NotificationProvider';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '236637181211-66567rahq1a8samle5q40q6po87j6up6.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
+if (!GOOGLE_CLIENT_ID) {
+  console.warn('VITE_GOOGLE_CLIENT_ID is not set - Google sign-in will be unavailable.');
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

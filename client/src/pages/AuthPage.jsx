@@ -1,17 +1,19 @@
 // client/src/pages/AuthPage.jsx
-import React, { useState } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams, useLocation } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogIn, Shield, ArrowRight, ArrowLeft } from 'lucide-react';
-import API from '../api';
+import API, { setAdminToken } from '../api';
 import { setCookie } from '../utils/cookies';
 import Toast from '../components/Toast';
 
 export default function AuthPage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const isAdminMode = searchParams.get('admin') === 'true';
-  const [isLogin, setIsLogin] = useState(true);
+  // /signup must open the signup form, not the login form.
+  const [isLogin, setIsLogin] = useState(location.pathname !== '/signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
@@ -19,6 +21,18 @@ export default function AuthPage() {
   const [toasts, setToasts] = useState([]);
   const [passwordError, setPasswordError] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.pathname === '/signup') setIsLogin(false);
+    if (location.pathname === '/login') setIsLogin(true);
+  }, [location.pathname]);
+
+  const toggleMode = () => {
+    const nextIsLogin = !isLogin;
+    setIsLogin(nextIsLogin);
+    setPasswordError('');
+    navigate(nextIsLogin ? '/login' : '/signup', { replace: true });
+  };
 
   const showToast = (message, type = 'info', duration = 5000) => {
     const id = Date.now();
@@ -59,18 +73,18 @@ export default function AuthPage() {
     // Handle admin login
     if (isAdminMode) {
       try {
-        // Verify admin password
-        await API.head('/reports/export', { 
-          headers: { 'x-admin-password': adminPassword }
-        });
-        sessionStorage.setItem('streetsense_admin_pwd', adminPassword);
+        const res = await API.post('/auth/admin/login', { password: adminPassword });
+        setAdminToken(res.data.token);
+        setAdminPassword('');
         showToast('Admin login successful!', 'success', 2000);
         setTimeout(() => navigate('/admin'), 600);
       } catch (err) {
-        console.error('Admin auth error:', err);
-        const errorMsg = err.response?.status === 401 
-          ? 'Invalid admin password. Access denied.' 
-          : 'Failed to verify admin credentials. Please try again.';
+        const status = err.response?.status;
+        const errorMsg = status === 401
+          ? 'Invalid admin password. Access denied.'
+          : status === 429
+            ? 'Too many attempts. Please wait 15 minutes.'
+            : 'Failed to verify admin credentials. Please try again.';
         showToast(errorMsg, 'error');
       } finally {
         setLoading(false);
@@ -114,7 +128,6 @@ export default function AuthPage() {
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Authentication failed. Please try again.';
       showToast(errorMsg, 'error');
-      console.error('Auth error:', err);
     } finally {
       setLoading(false);
     }
@@ -148,7 +161,6 @@ export default function AuthPage() {
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Google authentication failed. Please try again.';
       showToast(errorMsg, 'error');
-      console.error('Google auth error:', err);
     } finally {
       setLoading(false);
     }
@@ -292,7 +304,7 @@ export default function AuthPage() {
                   <button
                     type="button"
                     className="btn btn-link p-0 text-decoration-none fw-bold"
-                    onClick={() => setIsLogin(!isLogin)}
+                    onClick={toggleMode}
                     style={{ color: 'var(--primary)' }}
                   >
                     {isLogin ? 'Sign up' : 'Log in'}

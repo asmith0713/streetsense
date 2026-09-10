@@ -17,9 +17,34 @@ export const BACKEND_URL = hasExplicitBackend
 
 const API = axios.create({ baseURL: `${BACKEND_URL}/api` });
 
-// Add token to all requests if available
+export const ADMIN_TOKEN_KEY = 'streetsense_admin_token';
+
+export function getAdminToken() {
+  return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+}
+
+export function setAdminToken(token) {
+  sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+}
+
+export function clearAdminToken() {
+  sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+}
+
+/** Request config that authenticates as the moderator rather than the user. */
+export function adminRequest(config = {}) {
+  return {
+    ...config,
+    headers: { ...(config.headers || {}), Authorization: `Bearer ${getAdminToken()}` }
+  };
+}
+
+// Add the user token unless the caller supplied their own Authorization
+// header (admin requests carry a separate, short-lived token).
 API.interceptors.request.use(
   (config) => {
+    if (config.headers?.Authorization) return config;
+
     const token = getCookie('token') || localStorage.getItem('token') || localStorage.getItem('streetsense_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -27,18 +52,6 @@ API.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
-);
-
-// Handle 401 responses globally
-API.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Don't auto-clear tokens or redirect - let components handle it
-      // This prevents false logouts when navigating to profile
-    }
-    return Promise.reject(error);
-  }
 );
 
 export default API;

@@ -46,7 +46,7 @@ const UserSchema = new mongoose.Schema({
     },
     relationship: {
       type: String,
-      enum: ['family', 'mother', 'father', 'brother', 'sister', 'cousin', 'relative', 'friend'],
+      enum: ['family', 'mother', 'father', 'brother', 'sister', 'cousin', 'relative', 'friend', 'colleague', 'other'],
       default: 'family'
     },
     isPrimary: {

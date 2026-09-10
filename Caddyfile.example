@@ -8,8 +8,13 @@ http://example.com {
 https://example.com {
     encode zstd gzip
 
-    @backend path /api/* /auth/* /reports/* /locations/* /heat/* /emergency/*
+    # The API is mounted under /api only. Sending /reports/* or /auth/* here
+    # would break the client-side routes of the same name.
+    @backend path /api/*
     reverse_proxy @backend backend:5000
+
+    @health path /health
+    reverse_proxy @health backend:5000
 
     reverse_proxy frontend:80
 }

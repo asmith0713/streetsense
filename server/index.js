@@ -63,8 +63,7 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200,
   maxAge: 86400,
-  exposedHeaders: ['x-admin-password'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-password']
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 app.use(cors(corsOptions));
 
@@ -75,7 +74,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const dataDir = path.join(__dirname, 'data');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
-// Images are now served from MongoDB GridFS via /api/images/:id
+// Report photos are stored in Cloudflare R2 (see utils/r2.js) and served
+// from its public URL; nothing is written to local disk.
 
 app.use('/data', express.static(dataDir, { maxAge: '1h', etag: true }));
 
@@ -156,7 +156,10 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   console.error(err.stack);
   const status = err.status || 500;
-  const message = err.message || 'Internal Server Error';
+  // Never echo an internal error message to the client in production.
+  const message = status < 500
+    ? (err.message || 'Bad Request')
+    : (process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error');
   res.status(status).json({ 
     error: message,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }) 

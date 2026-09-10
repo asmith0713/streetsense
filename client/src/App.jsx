@@ -7,6 +7,7 @@ import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
 import ProtectedAdminRoute from './components/ProtectedAdminRoute';
 import { getCookie, removeCookie } from './utils/cookies';
+import { getDeviceId } from './utils/deviceId';
 import API from './api';
 import './index.css';
 import './App.css';
@@ -25,18 +26,39 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
-          <h1 style={{ color: 'red' }}>Something went wrong</h1>
-          <pre style={{ whiteSpace: 'pre-wrap', color: '#333' }}>
-            {this.state.error?.toString()}
-            {'\n\n'}
-            {this.state.error?.stack}
-          </pre>
+        <div className="page-container d-flex flex-column align-items-center justify-content-center text-center">
+          <h1 className="h3 fw-bold mb-2">Something went wrong</h1>
+          <p className="text-muted mb-4" style={{ maxWidth: '32rem' }}>
+            This page hit an unexpected error. Reloading usually fixes it.
+          </p>
+          <div className="d-flex gap-2">
+            <button className="btn btn-primary" onClick={() => window.location.reload()}>Reload page</button>
+            <a className="btn btn-outline-secondary" href="/">Go to home</a>
+          </div>
+          {/* Details are for developers only - never shown to users in production. */}
+          {import.meta.env.DEV && (
+            <pre className="mt-4 text-start small" style={{ whiteSpace: 'pre-wrap', maxWidth: '60rem' }}>
+              {this.state.error?.stack || this.state.error?.toString()}
+            </pre>
+          )}
         </div>
       );
     }
     return this.props.children;
   }
+}
+
+function NotFound() {
+  return (
+    <div className="page-container d-flex flex-column align-items-center justify-content-center text-center">
+      <h1 className="display-5 fw-bold mb-2">Page not found</h1>
+      <p className="text-muted mb-4">That address doesn't exist on StreetSense.</p>
+      <div className="d-flex gap-2">
+        <Link to="/" className="btn btn-primary">Go to home</Link>
+        <Link to="/live" className="btn btn-outline-secondary">Open the live map</Link>
+      </div>
+    </div>
+  );
 }
 
 function Navigation() {
@@ -89,7 +111,7 @@ function Navigation() {
   const handleLogout = async () => {
     // Deactivate all locations for this user (logout cleanup)
     try {
-      await API.delete('/locations/mine', { data: {} });
+      await API.delete('/locations/mine', { data: { deviceId: getDeviceId() } });
     } catch (err) {
       console.error('Failed to deactivate locations on logout:', err);
     }
@@ -208,11 +230,8 @@ export default function App() {
   const location = useLocation();
   const isMapPage = ['/map', '/live', '/reports'].includes(location.pathname);
 
-  // Apply saved theme on mount so it persists across pages
-  useEffect(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved) document.documentElement.setAttribute('data-theme', saved);
-  }, []);
+  // The saved theme is applied in index.html before first paint, so there is
+  // nothing to do here on mount.
 
   return (
     <ErrorBoundary>
@@ -250,8 +269,8 @@ export default function App() {
             </ProtectedAdminRoute>
           } />
           
-          {/* 404 - Redirect to home */}
-          <Route path="*" element={<LandingPage />} />
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
     </div>

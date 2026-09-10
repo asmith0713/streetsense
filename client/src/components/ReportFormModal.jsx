@@ -1,21 +1,52 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, AlertTriangle, Image as ImageIcon, Send } from 'lucide-react';
+import { CATEGORIES, SAFETY_CATEGORIES } from '../constants';
+
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
 export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('safety');
   const [photo, setPhoto] = useState(null);
+  const [formError, setFormError] = useState('');
+
+  // Check the photo here so the user finds out immediately, instead of after
+  // waiting through an upload the server will reject.
+  function handlePhotoChange(e) {
+    const file = e.target.files[0];
+    setFormError('');
+
+    if (!file) {
+      setPhoto(null);
+      return;
+    }
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      setFormError('That image type is not supported. Use JPEG, PNG, GIF or WEBP.');
+      e.target.value = '';
+      setPhoto(null);
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setFormError(`That photo is ${(file.size / 1024 / 1024).toFixed(1)}MB. The limit is ${MAX_PHOTO_BYTES / 1024 / 1024}MB.`);
+      e.target.value = '';
+      setPhoto(null);
+      return;
+    }
+    setPhoto(file);
+  }
 
   function submit(e) {
     e.preventDefault();
-    
-    if (!title || title.trim().length === 0) return alert('Title is required');
-    if (title.length > 200) return alert('Title must be less than 200 characters');
-    if (description.length > 2000) return alert('Description must be less than 2000 characters');
-    if (isNaN(lat) || isNaN(lng)) return alert('Invalid location coordinates');
-    
+    setFormError('');
+
+    if (!title || title.trim().length === 0) return setFormError('Please add a title.');
+    if (title.length > 200) return setFormError('Title must be under 200 characters.');
+    if (description.length > 2000) return setFormError('Description must be under 2000 characters.');
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return setFormError('Invalid location coordinates.');
+
     onSubmit({ title, description, category, lat, lng, photo });
   }
 
@@ -52,6 +83,11 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
 
           <div className="p-4 overflow-auto custom-scrollbar">
             <form id="report-form" onSubmit={submit}>
+              {formError && (
+                <div className="alert alert-danger d-flex align-items-center gap-2 p-2 small">
+                  <AlertTriangle size={16} /> {formError}
+                </div>
+              )}
               <div className="mb-4">
                 <label className="form-label fw-bold small text-uppercase text-muted">Title</label>
                 <input 
@@ -70,22 +106,18 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
                   value={category} 
                   onChange={e => setCategory(e.target.value)}
                 >
-                  <option value="safety">Safety Hazard</option>
-                  <option value="traffic">Traffic Issue</option>
-                  <option value="water">Water / Drainage</option>
-                  <option value="garbage">Garbage / Sanitation</option>
-                  <option value="noise">Noise Pollution</option>
-                  <option value="stray">Stray Animals</option>
+                  {CATEGORIES.filter(c => !c.safety && c.value !== 'other').map(c => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
                   <optgroup label="Women's Safety">
-                    <option value="harassment">Harassment</option>
-                    <option value="eve-teasing">Eve-Teasing</option>
-                    <option value="assault">Assault</option>
-                    <option value="stalking">Stalking</option>
+                    {CATEGORIES.filter(c => c.safety).map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
                   </optgroup>
                   <option value="other">Other</option>
                 </select>
                 
-                {['harassment', 'eve-teasing', 'assault', 'stalking'].includes(category) && (
+                {SAFETY_CATEGORIES.includes(category) && (
                   <div className="alert alert-danger d-flex align-items-center gap-2 mt-2 p-2 small">
                     <AlertTriangle size={16} />
                     For immediate emergencies, please use the SOS button.
@@ -114,10 +146,10 @@ export default function ReportFormModal({ lat, lng, onClose, onSubmit }) {
                     type="file" 
                     className="form-control input-modern border-start-0 ps-0" 
                     accept="image/*" 
-                    onChange={e => setPhoto(e.target.files[0])} 
+                    onChange={handlePhotoChange} 
                   />
                 </div>
-                <div className="form-text small">Upload your photo evidence</div>
+                <div className="form-text small">JPEG, PNG, GIF or WEBP, up to 8MB. Location data is removed before upload.</div>
               </div>
             </form>
           </div>

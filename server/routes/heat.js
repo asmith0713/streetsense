@@ -2,15 +2,16 @@
 const express = require('express');
 const router = express.Router();
 const Report = require('../models/Report');
+const { buildReportFilter } = require('../utils/queryFilters');
 
 // /api/reports/heat?since=ISO&categories=a,b
 router.get('/', async (req, res) => {
   try {
-    const { since, categories } = req.query;
+    const { filter, error } = buildReportFilter(req.query);
+    if (error) return res.status(400).json({ error });
 
-    const filter = {};
-    if (since) filter.timestamp = { $gte: new Date(since) };
-    if (categories) filter.category = { $in: categories.split(',') };
+    // Removed reports must not reappear in the heat layer.
+    filter.status = { $ne: 'deleted' };
 
     const reports = await Report.find(filter, {
       'location.coordinates': 1,
@@ -31,7 +32,7 @@ router.get('/', async (req, res) => {
 
     res.json({ points });
   } catch (err) {
-    console.error('Heat endpoint error:', err);
+    console.error('Heat endpoint error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });

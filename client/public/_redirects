@@ -1,13 +1,9 @@
-# Netlify/Vercel redirects for SPA routing
-# All routes should serve index.html to support React Router
-
-/* /index.html 200
-
-# API routes should proxy to backend
-/api/* https://your-api-domain.com/api/:splat 200
+# Netlify SPA routing - every route is served by the React app.
+# The API is reached directly via VITE_BACKEND_URL, so no proxy rule here.
 
 # Legacy route redirects
-/auth /login 301
-/profile /account 301
-/map /live 301
+/auth              /login    301
+/profile           /account  301
+/map               /live     301
 
+/*                 /index.html  200

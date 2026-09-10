@@ -28,7 +28,22 @@ import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-import { REFRESH_INTERVAL, USER_LOCATION_RADIUS, MAP_DEFAULT_ZOOM, MAP_TRACKING_ZOOM } from '../constants';
+import {
+  REFRESH_INTERVAL, MAP_DEFAULT_ZOOM, MAP_TRACKING_ZOOM, MAX_REPORTS_LIMIT,
+  LOCATION_MIN_INTERVAL_MS, LOCATION_MIN_DISTANCE_M, DEFAULT_LOCATION_ACCURACY_M,
+  CATEGORY_FILTER_OPTIONS
+} from '../constants';
+
+/** Great-circle distance in metres, used to skip trivial location updates. */
+function distanceInMeters(lat1, lng1, lat2, lng2) {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
 
 // --- Configuration ---
 
@@ -120,6 +135,11 @@ function MapClick({ onClick }) {
   return null;
 }
 
+function MapMoveWatcher({ onMoveEnd }) {
+  useMapEvents({ moveend: onMoveEnd });
+  return null;
+}
+
 function MapInstanceSetter({ setMap }) {
   const map = useMap();
   useEffect(() => {
@@ -156,16 +176,21 @@ export default function MapPage() {
   const [heatPoints, setHeatPoints] = useState([]);
   const [crowdPoints, setCrowdPoints] = useState([]);
   const [activeUserCount, setActiveUserCount] = useState(0);
+  const [crowdNotice, setCrowdNotice] = useState(null);
+  const [myVotes, setMyVotes] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [showCrowdHeatmap, setShowCrowdHeatmap] = useState(
     localStorage.getItem('streetsense_crowd_heatmap') === 'true'
   );
+  // Opt-in by default off: broadcasting publishes where the user physically is.
   const [shareLocationEnabled, setShareLocationEnabled] = useState(
-    localStorage.getItem('streetsense_share_location') !== 'false'
+    localStorage.getItem('streetsense_share_location') === 'true'
   );
+  const [showBroadcastConsent, setShowBroadcastConsent] = useState(false);
   
   const [pos, setPos] = useState([17.447, 78.396]);
   const [userLocation, setUserLocation] = useState(null);
+  const [locationAccuracy, setLocationAccuracy] = useState(null);
   const [sharedLocation, setSharedLocation] = useState(null);
   const [trackingLocation, setTrackingLocation] = useState(
     localStorage.getItem('streetsense_tracking') === 'true'
@@ -192,6 +217,7 @@ export default function MapPage() {
   const shareMenuRef = useRef(null);
   const shareToastTimerRef = useRef(null);
   const trackingRef = useRef(trackingLocation);
+  const lastBroadcastRef = useRef(null);
   const mountedRef = useRef(true);
 
   const getTimeDate = (filter) => {
@@ -213,7 +239,17 @@ export default function MapPage() {
         const dateStr = getTimeDate(timeFilter);
         if(dateStr) params.append('since', dateStr);
       }
-      
+      params.append('limit', String(MAX_REPORTS_LIMIT));
+
+      // Restrict to the visible area so the server's cap can't silently hide
+      // reports that are on screen.
+      const bounds = mapInstance?.getBounds?.();
+      if (bounds) {
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        params.append('bbox', [sw.lng, sw.lat, ne.lng, ne.lat].map(n => n.toFixed(5)).join(','));
+      }
+
       const reportRes = await API.get(`/reports?${params.toString()}`);
       const features = reportRes.data.features || [];
       
@@ -233,30 +269,67 @@ export default function MapPage() {
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, timeFilter, mode]);
+  }, [categoryFilter, timeFilter, mode, mapInstance]);
 
   const fetchCrowdData = useCallback(async () => {
     if (!showCrowdHeatmap) return;
+    const bounds = mapInstance?.getBounds?.();
+    if (!bounds) return;
+
     try {
-      const res = await API.get('/locations/heatmap');
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      const bbox = [sw.lng, sw.lat, ne.lng, ne.lat].map(n => n.toFixed(5)).join(',');
+      const res = await API.get(`/locations/heatmap?bbox=${bbox}`);
       setCrowdPoints(res.data.points || []);
       setActiveUserCount(res.data.count || 0);
+      setCrowdNotice(null);
     } catch (err) {
-      console.error('Crowd data fetch error:', err);
+      const status = err.response?.status;
+      if (status === 401) {
+        setCrowdNotice('Sign in to see where other people are.');
+      } else if (status === 400) {
+        setCrowdNotice(err.response?.data?.error || 'Zoom in to see crowd data.');
+      }
+      setCrowdPoints([]);
+      setActiveUserCount(0);
     }
-  }, [showCrowdHeatmap]);
+  }, [showCrowdHeatmap, mapInstance]);
 
   const updateUserLocation = useCallback(async (lat, lng, accuracy = 100) => {
     if (!shareLocationEnabled) return;
+
+    // Skip updates that are too frequent or too small to matter: watchPosition
+    // fires far more often than the server (or a phone battery) can afford.
+    const now = Date.now();
+    const last = lastBroadcastRef.current;
+    if (last) {
+      const movedMeters = distanceInMeters(last.lat, last.lng, lat, lng);
+      if (now - last.at < LOCATION_MIN_INTERVAL_MS && movedMeters < LOCATION_MIN_DISTANCE_M) return;
+    }
+    lastBroadcastRef.current = { lat, lng, at: now };
+
     try {
-      const deviceId = getDeviceId();
-      console.log('📍 Updating location:', { lat, lng, accuracy, deviceId });
-      const res = await API.post('/locations', { lat, lng, accuracy, deviceId });
-      console.log('✅ Location saved:', res.data);
+      await API.post('/locations', { lat, lng, accuracy, deviceId: getDeviceId() });
     } catch (err) {
-      console.error('❌ Location update error:', err.response?.data || err.message);
+      if (err.response?.status !== 429) {
+        console.error('Location update failed:', err.response?.data?.error || err.message);
+      }
     }
   }, [shareLocationEnabled]);
+
+  const stopBroadcasting = useCallback(async () => {
+    setShareLocationEnabled(false);
+    localStorage.setItem('streetsense_share_location', 'false');
+    lastBroadcastRef.current = null;
+    try {
+      // Also remove the position already published, rather than waiting for
+      // it to age out of the map.
+      await API.delete('/locations/mine', { data: { deviceId: getDeviceId() } });
+    } catch (err) {
+      console.error('Could not remove location from map:', err.message);
+    }
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -317,12 +390,6 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
-    // Only default to true for first-time users (key doesn't exist yet)
-    if (localStorage.getItem('streetsense_share_location') === null) {
-      setShareLocationEnabled(true);
-      localStorage.setItem('streetsense_share_location', 'true');
-    }
-
     if (!userLocation && !watchIdRef.current) {
       const timer = setTimeout(() => {
         requestInitialLocation();
@@ -348,11 +415,12 @@ export default function MapPage() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         if (!mountedRef.current) return;
-        const { latitude, longitude } = position.coords;
+        const { latitude, longitude, accuracy } = position.coords;
         const newPos = [latitude, longitude];
         setUserLocation(newPos);
+        setLocationAccuracy(accuracy);
         setPos(newPos);
-        
+
         if (localStorage.getItem('streetsense_tracking') === 'true') {
           startTracking();
         }
@@ -400,10 +468,11 @@ export default function MapPage() {
 
   const handleLocationSuccess = useCallback((position) => {
     if (!mountedRef.current) return;
-    const { latitude, longitude } = position.coords;
+    const { latitude, longitude, accuracy } = position.coords;
     const newPos = [latitude, longitude];
-    
+
     setUserLocation(newPos);
+    setLocationAccuracy(accuracy);
     setLocationError(null);
     
     if (trackingRef.current) {
@@ -448,11 +517,12 @@ export default function MapPage() {
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
+        const { latitude, longitude, accuracy } = position.coords;
         const newPos = [latitude, longitude];
         setUserLocation(newPos);
+        setLocationAccuracy(accuracy);
         setLocationError(null);
-        
+
         if (mapInstance) {
           mapInstance.flyTo(newPos, MAP_TRACKING_ZOOM, {
             animate: true,
@@ -487,9 +557,10 @@ export default function MapPage() {
     
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
+        const { latitude, longitude, accuracy } = position.coords;
         const newPos = [latitude, longitude];
         setUserLocation(newPos);
+        setLocationAccuracy(accuracy);
         setTrackingLocation(true);
         localStorage.setItem('streetsense_tracking', 'true');
         
@@ -607,6 +678,28 @@ export default function MapPage() {
     return `${window.location.origin}/map?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}&zoom=${MAP_TRACKING_ZOOM}`;
   }, [userLocation]);
 
+  // The user's own votes, so the arrows show their choice after a reload.
+  useEffect(() => {
+    let cancelled = false;
+    API.get('/reports/votes/mine')
+      .then(res => { if (!cancelled) setMyVotes(res.data.votes || {}); })
+      .catch(() => { /* signed out: no votes to show */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const recordVote = useCallback((reportId, value) => {
+    setMyVotes(prev => {
+      const next = { ...prev };
+      if (value) next[reportId] = value; else delete next[reportId];
+      return next;
+    });
+  }, []);
+
+  const handleMapMove = useCallback(() => {
+    fetchData();
+    if (showCrowdHeatmap) fetchCrowdData();
+  }, [fetchData, fetchCrowdData, showCrowdHeatmap]);
+
   const handleMapClick = (latlng) => {
     setFormLatLng([latlng.lat, latlng.lng]);
     setShowForm(true);
@@ -680,12 +773,10 @@ export default function MapPage() {
               <button 
                 className={`btn btn-sm d-flex align-items-center justify-content-center gap-1 position-relative ${shareLocationEnabled ? 'btn-info text-white' : 'btn-outline-info'}`}
                 onClick={() => {
-                  const newValue = !shareLocationEnabled;
-                  setShareLocationEnabled(newValue);
-                  localStorage.setItem('streetsense_share_location', newValue.toString());
-                  if (newValue && userLocation) {
-                    const [lat, lng] = userLocation;
-                    updateUserLocation(lat, lng);
+                  if (shareLocationEnabled) {
+                    stopBroadcasting();
+                  } else {
+                    setShowBroadcastConsent(true);
                   }
                 }}
                 title={shareLocationEnabled ? 'Stop Broadcasting' : 'Broadcast Location'}
@@ -728,16 +819,9 @@ export default function MapPage() {
                     onChange={e => setCategoryFilter(e.target.value)}
                   >
                     <option value="all">All Categories</option>
-                    <option value="safety">🛡️ Safety</option>
-                    <option value="traffic">🚗 Traffic</option>
-                    <option value="water">💧 Water</option>
-                    <option value="garbage">🗑️ Garbage</option>
-                    <option value="noise">🔊 Noise</option>
-                    <option value="stray">🐕 Stray Animals</option>
-                    <option value="harassment">⚠️ Harassment</option>
-                    <option value="eve-teasing">🚨 Eve-Teasing</option>
-                    <option value="stalking">👁️ Stalking</option>
-                    <option value="other">📌 Other</option>
+                    {CATEGORY_FILTER_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                   </select>
                   
                   <select 
@@ -779,6 +863,75 @@ export default function MapPage() {
 
       <LocationPermissionGuide show={showLocationGuide} onClose={() => setShowLocationGuide(false)} />
 
+      {/* --- CROWD MAP NOTICE --- */}
+      <AnimatePresence>
+        {showCrowdHeatmap && crowdNotice && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="position-absolute top-0 start-50 translate-middle-x mt-5 z-3 pointer-events-auto"
+          >
+            <div className="glass-panel p-2 px-3 d-flex align-items-center gap-2 small">
+              <Users size={16} className="text-success" />
+              <span>{crowdNotice}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- BROADCAST CONSENT --- */}
+      <AnimatePresence>
+        {showBroadcastConsent && (
+          <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 1070 }}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBroadcastConsent(false)}
+              className="modal-backdrop-dark position-absolute top-0 start-0 w-100 h-100"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="glass-panel p-4 rounded-4 shadow-lg position-relative mx-3"
+              style={{ width: '100%', maxWidth: '420px' }}
+            >
+              <h5 className="fw-bold d-flex align-items-center gap-2 mb-3">
+                <Share2 size={20} className="text-info" /> Share your location?
+              </h5>
+              <p className="small text-muted mb-2">
+                Your position is added to the crowd map so other signed-in users can see which
+                areas are busy. To protect you, positions are rounded to roughly a street block
+                and an area only appears once several people are in it.
+              </p>
+              <ul className="small text-muted ps-3 mb-3">
+                <li>Stored for 5 minutes, then deleted automatically</li>
+                <li>Never shown as your exact position or linked to your name</li>
+                <li>You can stop at any time - stopping removes you immediately</li>
+              </ul>
+              <div className="d-flex gap-2 justify-content-end">
+                <button className="btn btn-light border" onClick={() => setShowBroadcastConsent(false)}>
+                  Not now
+                </button>
+                <button
+                  className="btn btn-info text-white"
+                  onClick={() => {
+                    setShareLocationEnabled(true);
+                    localStorage.setItem('streetsense_share_location', 'true');
+                    setShowBroadcastConsent(false);
+                    if (userLocation) updateUserLocation(userLocation[0], userLocation[1]);
+                  }}
+                >
+                  Start sharing
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* --- LOCATION BROADCASTING INFO (compact) --- */}
       <AnimatePresence>
         {shareLocationEnabled && userLocation && (
@@ -795,10 +948,7 @@ export default function MapPage() {
             <div className="glass-panel px-3 py-2 rounded-pill d-flex align-items-center gap-2 border-success bg-success bg-opacity-10 shadow-sm">
               <span className="pulse-dot bg-success"></span>
               <span className="fw-bold text-success small">Broadcasting</span>
-              <button className="btn-close small ms-1" style={{ fontSize: '0.6rem' }} onClick={() => {
-                setShareLocationEnabled(false);
-                localStorage.setItem('streetsense_share_location', 'false');
-              }}></button>
+              <button className="btn-close small ms-1" style={{ fontSize: '0.6rem' }} onClick={stopBroadcasting}></button>
             </div>
           </motion.div>
         )}
@@ -954,6 +1104,7 @@ export default function MapPage() {
         worldCopyJump={false}
       >
         <MapInstanceSetter setMap={setMapInstance} />
+        <MapMoveWatcher onMoveEnd={handleMapMove} />
         <RecenterMap position={userLocation} isTracking={trackingLocation} />
         <MapClick onClick={handleMapClick} />
         
@@ -988,7 +1139,7 @@ export default function MapPage() {
             </Marker>
             <Circle
               center={userLocation}
-              radius={USER_LOCATION_RADIUS}
+              radius={locationAccuracy || DEFAULT_LOCATION_ACCURACY_M}
               pathOptions={{ color: '#4285F4', fillColor: '#4285F4', fillOpacity: 0.15, weight: 1 }}
             />
           </>
@@ -997,7 +1148,12 @@ export default function MapPage() {
         {mode === 'pins' && reports.map(r => (
           <Marker key={r._id} position={[r.coords[1], r.coords[0]]} icon={getCategoryIcon(r.category)}>
             <Popup minWidth={280} maxWidth={320} className="glass-popup">
-              <ReportCard report={r} onUpdated={fetchData} />
+              <ReportCard
+                report={r}
+                onUpdated={fetchData}
+                initialVote={myVotes[r._id] || null}
+                onVoted={recordVote}
+              />
             </Popup>
           </Marker>
         ))}

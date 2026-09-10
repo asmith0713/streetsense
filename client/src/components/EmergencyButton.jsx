@@ -8,6 +8,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
   const [loading, setLoading] = useState(false);
   const [emergencyContacts, setEmergencyContacts] = useState(null);
   const [personalContacts, setPersonalContacts] = useState([]);
+  const [delivery, setDelivery] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
@@ -70,6 +71,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
     setShow(false);
     setError(null);
     setSuccess(false);
+    setDelivery(null);
   };
 
   const createEmergency = async (type, severity = 'high') => {
@@ -96,6 +98,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
 
       setEmergencyContacts(response.data.emergencyContacts);
       setPersonalContacts(response.data.personalContacts || []);
+      setDelivery(response.data.alertDelivery || null);
       setSuccess(true);
       if (onEmergencyCreated) onEmergencyCreated(response.data);
       
@@ -162,7 +165,9 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
                   <ShieldAlert size={32} className="text-danger" />
                 </div>
                 <h3 className="fw-bold mb-1">Emergency Assistance</h3>
-                <p className="text-muted small">Only use in genuine emergencies</p>
+                <p className="text-muted small">
+                  Records your location and alerts your saved contacts. It does not call the police for you.
+                </p>
               </div>
 
               {error && (
@@ -181,9 +186,21 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
 
               {success && emergencyContacts ? (
                 <div className="text-center">
-                  <div className="alert alert-success p-3 mb-4">
-                    <div className="fw-bold mb-1">Alert Sent Successfully</div>
-                    <div className="small">Authorities have been notified of your location.</div>
+                  <div className="alert alert-warning p-3 mb-4 text-start">
+                    <div className="fw-bold mb-1">Alert recorded with your location</div>
+                    {delivery?.contactsNotified > 0 ? (
+                      <div className="small">
+                        {delivery.contactsNotified} of your emergency contact{delivery.contactsNotified === 1 ? ' was' : 's were'} messaged on Telegram.
+                      </div>
+                    ) : (
+                      <div className="small">
+                        No one has been contacted automatically.
+                        {delivery && !delivery.telegramConfigured && ' Automatic alerts are not enabled on this server.'}
+                      </div>
+                    )}
+                    <div className="small fw-bold mt-2">
+                      Call for help now using the buttons below - this app does not call anyone for you.
+                    </div>
                   </div>
                   
                   {personalContacts && personalContacts.length > 0 && (
@@ -230,7 +247,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
                     <ShieldAlert size={24} />
                     <div>
                       <div className="fw-bold">Harassment / Threat</div>
-                      <div className="small opacity-75">Immediate police assistance</div>
+                      <div className="small opacity-75">Shows police and women's helpline numbers</div>
                     </div>
                   </button>
 
@@ -242,7 +259,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
                     <AlertTriangle size={24} />
                     <div>
                       <div className="fw-bold">Physical Assault</div>
-                      <div className="small opacity-75">Critical emergency response</div>
+                      <div className="small opacity-75">Highest severity - alerts your contacts</div>
                     </div>
                   </button>
 
@@ -266,7 +283,7 @@ export default function EmergencyButton({ userLocation, onEmergencyCreated, onLo
                     <HeartPulse size={24} />
                     <div>
                       <div className="fw-bold">Medical Emergency</div>
-                      <div className="small opacity-75">Ambulance required</div>
+                      <div className="small opacity-75">Shows the ambulance number</div>
                     </div>
                   </button>
                 </div>

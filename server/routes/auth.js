@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
+const { passwordMatches, issueAdminToken } = require('../middleware/adminAuth');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -17,27 +19,57 @@ if (!JWT_SECRET) {
 let googleClient = null;
 if (GOOGLE_CLIENT_ID) {
   googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
-  console.log('✅ Google OAuth client initialized with Client ID:', GOOGLE_CLIENT_ID);
+  console.log('Google OAuth client initialized');
 } else {
-  console.warn('⚠️ GOOGLE_CLIENT_ID not set. Google OAuth will be disabled.');
+  console.warn('GOOGLE_CLIENT_ID not set. Google OAuth will be disabled.');
+}
+
+// Credential endpoints get a much tighter budget than the general /api limiter,
+// so the shared admin password and user passwords are not brute-forceable.
+const credentialLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: 'Too many sign-in attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true
+});
+
+// Same policy the signup form shows the user. Enforced here so the policy is real.
+function validatePassword(password) {
+  if (typeof password !== 'string' || password.length < 8) {
+    return 'Password must be at least 8 characters long';
+  }
+  if (!/\d/.test(password)) {
+    return 'Password must contain at least one number';
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return 'Password must contain at least one special character';
+  }
+  return null;
+}
+
+function tokenFor(user) {
+  return jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '2d' });
 }
 
 // POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', credentialLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Please enter all fields' });
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: 'Please enter a valid email address' });
     }
-    
-    if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
     }
 
     const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
@@ -54,10 +86,9 @@ router.post('/register', async (req, res) => {
     });
 
     const savedUser = await newUser.save();
-    const token = jwt.sign({ id: savedUser._id }, JWT_SECRET, { expiresIn: '2d' });
 
     res.json({
-      token,
+      token: tokenFor(savedUser),
       user: {
         id: savedUser._id,
         email: savedUser.email
@@ -65,13 +96,13 @@ router.post('/register', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Register Error:', err);
+    console.error('Register error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', credentialLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -84,8 +115,9 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
-    if (!user.password || user.authProvider === 'google') {
-      return res.status(400).json({ message: 'This account is linked to Google. Please sign in with Google.' });
+    // Google-only accounts have no password to check against.
+    if (!user.password) {
+      return res.status(400).json({ message: 'This account uses Google sign-in. Please continue with Google.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -93,10 +125,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '2d' });
-
     res.json({
-      token,
+      token: tokenFor(user),
       user: {
         id: user._id,
         email: user.email
@@ -104,95 +134,79 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Login Error:', err);
+    console.error('Login error:', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
+// POST /api/auth/admin/login - exchange the admin password for a short-lived token
+router.post('/admin/login', credentialLimiter, (req, res) => {
+  const { password } = req.body || {};
+
+  if (!process.env.ADMIN_PASSWORD) {
+    console.error('ADMIN_PASSWORD is not set');
+    return res.status(500).json({ message: 'Server configuration error' });
+  }
+
+  if (!passwordMatches(password)) {
+    return res.status(401).json({ message: 'Invalid admin password' });
+  }
+
+  res.json({ token: issueAdminToken(), expiresIn: '8h' });
+});
+
 // POST /api/auth/google - Google OAuth login/register
-router.post('/google', async (req, res) => {
+router.post('/google', credentialLimiter, async (req, res) => {
   try {
     const { credential } = req.body;
 
-    console.log('📨 Google OAuth request received');
-
     if (!credential) {
-      console.error('❌ No credential provided');
       return res.status(400).json({ message: 'Google credential is required' });
     }
 
     if (!googleClient) {
-      console.error('❌ Google OAuth client not initialized. GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID);
       return res.status(503).json({ message: 'Google authentication is not configured on the server' });
     }
 
-    console.log('🔍 Verifying Google token...');
-    console.log('   Client ID:', GOOGLE_CLIENT_ID);
-
     let ticket;
     try {
-      // Verify the Google token
       ticket = await googleClient.verifyIdToken({
         idToken: credential,
         audience: GOOGLE_CLIENT_ID
       });
-      console.log('✅ Token verified successfully');
     } catch (verifyErr) {
-      console.error('❌ Token verification failed:', verifyErr.message);
-      console.error('   Full error:', verifyErr);
-      
-      // Provide specific error messages
-      if (verifyErr.message.includes('Wrong number of segments')) {
-        return res.status(400).json({ message: 'Invalid token format from Google' });
-      }
-      if (verifyErr.message.includes('audience')) {
-        return res.status(400).json({ 
-          message: 'Token audience mismatch. Check GOOGLE_CLIENT_ID configuration.',
-          debug: `Expected: ${GOOGLE_CLIENT_ID}, Got different value in token`
-        });
-      }
-      if (verifyErr.message.includes('expired')) {
-        return res.status(400).json({ message: 'Google token has expired. Please try again.' });
-      }
-      
-      return res.status(400).json({ 
-        message: 'Failed to verify Google token',
-        error: verifyErr.message 
-      });
+      // Log the detail; return a generic message so server config is not disclosed.
+      console.error('Google token verification failed:', verifyErr.message);
+      return res.status(400).json({ message: 'Could not verify your Google sign-in. Please try again.' });
     }
 
     const payload = ticket.getPayload();
-    console.log('📋 Token payload:', {
-      sub: payload.sub,
-      email: payload.email,
-      name: payload.name ? '***' : 'N/A'
-    });
-
     const { sub: googleId, email, name, picture } = payload;
 
     if (!email) {
-      console.error('❌ No email in Google payload');
       return res.status(400).json({ message: 'Unable to get email from Google account' });
     }
 
-    // Check if user exists
-    console.log('🔍 Looking up user with email:', email);
-    let user = await User.findOne({ 
-      $or: [{ googleId }, { email: email.toLowerCase() }] 
+    let user = await User.findOne({
+      $or: [{ googleId }, { email: email.toLowerCase() }]
     });
 
     if (user) {
-      console.log('👤 Existing user found:', user._id);
-      if (!user.googleId && user.authProvider === 'local') {
-        console.log('🔗 Linking Google account to existing local account');
+      // Link Google to the existing account, but never disable an existing
+      // password: authProvider only flips for accounts that have no password.
+      let changed = false;
+      if (!user.googleId) {
         user.googleId = googleId;
-        user.authProvider = 'google';
-        user.name = name;
-        user.picture = picture;
-        await user.save();
+        changed = true;
       }
+      if (!user.password && user.authProvider !== 'google') {
+        user.authProvider = 'google';
+        changed = true;
+      }
+      if (!user.name && name) { user.name = name; changed = true; }
+      if (!user.picture && picture) { user.picture = picture; changed = true; }
+      if (changed) await user.save();
     } else {
-      console.log('✨ Creating new user');
       user = new User({
         email: email.toLowerCase(),
         googleId,
@@ -201,15 +215,10 @@ router.post('/google', async (req, res) => {
         authProvider: 'google'
       });
       await user.save();
-      console.log('✅ New user created:', user._id);
     }
 
-    // Create JWT token
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '2d' });
-    console.log('🎫 JWT token generated');
-
     res.json({
-      token,
+      token: tokenFor(user),
       user: {
         id: user._id,
         email: user.email,
@@ -219,40 +228,44 @@ router.post('/google', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Google Auth Error:', err.message);
-    console.error('   Full error:', err);
-    res.status(500).json({ message: 'Google authentication failed', error: err.message });
+    console.error('Google auth error:', err.message);
+    res.status(500).json({ message: 'Google authentication failed' });
   }
 });
 
+/**
+ * Resolve the caller's user id, or send a 401. Verification happens outside the
+ * route's try/catch so an expired token reports 401 rather than 500.
+ */
+function requireUserId(req, res) {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+
+  if (!token) {
+    res.status(401).json({ message: 'No token provided' });
+    return null;
+  }
+
+  try {
+    return jwt.verify(token, JWT_SECRET).id;
+  } catch (err) {
+    res.status(401).json({ message: 'Invalid or expired token' });
+    return null;
+  }
+}
+
 // GET /api/auth/me - Get current user info
 router.get('/me', async (req, res) => {
+  const userId = requireUserId(req, res);
+  if (!userId) return;
+
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
-    if (!token) {
-      console.log('GET /auth/me - No token provided');
-      return res.status(401).json({ message: 'No token provided' });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (jwtErr) {
-      console.error('GET /auth/me - JWT verification failed:', jwtErr.message);
-      return res.status(401).json({ message: 'Invalid or expired token' });
-    }
-
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(userId).select('-password');
 
     if (!user) {
-      console.log('GET /auth/me - User not found for ID:', decoded.id);
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log('GET /auth/me - Success for user:', user.email);
-    
-    res.json({ 
+    res.json({
       user: {
         id: user._id,
         email: user.email,
@@ -268,23 +281,20 @@ router.get('/me', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('GET /auth/me - Server error:', err);
+    console.error('GET /auth/me error:', err.message);
     res.status(500).json({ message: 'Server error while fetching user data' });
   }
 });
 
 // PUT /api/auth/profile - Update user profile
 router.put('/profile', async (req, res) => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ message: 'No authentication token' });
-    }
+  const userId = requireUserId(req, res);
+  if (!userId) return;
 
-    const decoded = jwt.verify(token, JWT_SECRET);
+  try {
     const { name, phone, address, bloodType, allergies, medicalConditions, emergencyContacts } = req.body;
-    
-    const user = await User.findById(decoded.id);
+
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -295,7 +305,7 @@ router.put('/profile', async (req, res) => {
     if (bloodType !== undefined) user.bloodType = bloodType;
     if (allergies !== undefined) user.allergies = allergies;
     if (medicalConditions !== undefined) user.medicalConditions = medicalConditions;
-    
+
     if (Array.isArray(emergencyContacts)) {
       for (const contact of emergencyContacts) {
         if (!contact.name || !contact.phone) {
@@ -307,7 +317,7 @@ router.put('/profile', async (req, res) => {
 
     await user.save();
 
-    res.json({ 
+    res.json({
       message: 'Profile updated successfully',
       user: {
         id: user._id,
@@ -322,7 +332,13 @@ router.put('/profile', async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Update profile error:', err);
+    // Surface schema validation problems (e.g. an unknown relationship value)
+    // as a 400 with the offending field, instead of an opaque 500.
+    if (err.name === 'ValidationError') {
+      const detail = Object.values(err.errors)[0]?.message || 'Invalid profile data';
+      return res.status(400).json({ message: detail });
+    }
+    console.error('Update profile error:', err.message);
     res.status(500).json({ message: 'Failed to update profile' });
   }
 });
