@@ -124,8 +124,17 @@ async function verifyBotToken() {
   }
 }
 
+/**
+ * True when the bot token is present, i.e. alerts can actually be delivered.
+ * Callers use this so the UI never claims a notification it could not send.
+ */
+function isTelegramConfigured() {
+  return Boolean(TELEGRAM_BOT_TOKEN);
+}
+
 module.exports = {
   sendEmergencyAlert,
   sendEmergencyAlertsToContacts,
-  verifyBotToken
+  verifyBotToken,
+  isTelegramConfigured
 };

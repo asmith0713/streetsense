@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import API, { BACKEND_URL } from '../api';
+import API, { BACKEND_URL, adminRequest, getAdminToken, setAdminToken, clearAdminToken } from '../api';
 import ConfirmModal from '../components/ConfirmModal';
 import Lightbox from '../components/Lightbox';
 import { useNotifications } from '../components/NotificationProvider';
@@ -8,12 +8,12 @@ import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, Flag, AlertTriangle, LogOut, Filter, Download, 
   RefreshCw, Trash2, CheckCircle, MapPin, Clock, ThumbsUp, ThumbsDown,
-  Search, Archive, Image as ImageIcon
+  Search, Archive, Image as ImageIcon, Phone
 } from 'lucide-react';
 
 export default function AdminPanel() {
-  const [password, setPassword] = useState(sessionStorage.getItem('streetsense_admin_pwd') || '');
-  const [authorized, setAuthorized] = useState(!!sessionStorage.getItem('streetsense_admin_pwd'));
+  const [password, setPassword] = useState('');
+  const [authorized, setAuthorized] = useState(!!getAdminToken());
   const [reports, setReports] = useState([]);
   const [emergencies, setEmergencies] = useState([]);
   const [activeTab, setActiveTab] = useState('reports');
@@ -42,10 +42,7 @@ export default function AdminPanel() {
   const loadReports = useCallback(async () => {
     setLoading(true);
     try {
-      const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
-      const res = await API.get('/reports/admin/all?limit=5000', {
-        headers: { 'x-admin-password': adminPassword }
-      });
+      const res = await API.get('/reports/admin/all?limit=5000', adminRequest());
       const features = res.data.features || [];
       const allReports = features.map(f => ({ 
         ...(f.properties || {}), 
@@ -55,8 +52,8 @@ export default function AdminPanel() {
       setReports(allReports);
     } catch (err) { 
       console.error('Load reports error:', err);
-      const errorMsg = err.response?.status === 401 
-        ? 'Admin authentication failed. Please logout and login again.' 
+      const errorMsg = err.response?.status === 401
+        ? 'Admin session expired. Please sign in again.'
         : 'Failed to fetch reports.';
       notifyError(errorMsg); 
     } finally { 
@@ -72,7 +69,7 @@ export default function AdminPanel() {
 
   const loadEmergencies = useCallback(async () => {
     try {
-      const res = await API.get('/emergency/active');
+      const res = await API.get('/emergency/active', adminRequest());
       setEmergencies(res.data.emergencies || []);
     } catch (err) {
       console.error('Load emergencies error:', err);
@@ -94,33 +91,53 @@ export default function AdminPanel() {
     }
     
     try {
-      await API.head('/reports/export', { 
-        headers: { 'x-admin-password': password }
-      });
-      sessionStorage.setItem('streetsense_admin_pwd', password);
+      const res = await API.post('/auth/admin/login', { password });
+      setAdminToken(res.data.token);
       setAuthorized(true);
+      setPassword('');
       notifySuccess('Admin access confirmed.');
     } catch (err) {
-      console.error('Admin auth error:', err);
-      const errorMsg = err.response?.status === 401 
-        ? 'Invalid admin password. Access denied.' 
-        : 'Failed to verify admin credentials. Please try again.';
+      const status = err.response?.status;
+      const errorMsg = status === 401
+        ? 'Invalid admin password. Access denied.'
+        : status === 429
+          ? 'Too many attempts. Please wait 15 minutes.'
+          : 'Failed to verify admin credentials. Please try again.';
       notifyError(errorMsg);
       setPassword('');
     }
   }
 
   const deleteReport = useCallback(async (reportId) => {
-    const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
     try {
-      await API.delete(`/reports/${reportId}`, {
-        headers: { 'x-admin-password': adminPassword }
-      });
+      await API.delete(`/reports/${reportId}`, adminRequest());
       notifySuccess('Report removed from public map. It will still appear in CSV exports.');
       await loadReports();
     } catch (err) {
       console.error('Delete error:', err);
       const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Delete failed';
+      notifyError(`Failed: ${errorMsg}`);
+    }
+  }, [loadReports, notifyError, notifySuccess]);
+
+  const setReportStatus = useCallback(async (reportId, status) => {
+    try {
+      await API.put(`/reports/${reportId}/status`, { status }, adminRequest());
+      notifySuccess(status === 'verified' ? 'Report marked as verified.' : 'Report marked as resolved.');
+      await loadReports();
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Could not update status';
+      notifyError(`Failed: ${errorMsg}`);
+    }
+  }, [loadReports, notifyError, notifySuccess]);
+
+  const restoreReport = useCallback(async (reportId) => {
+    try {
+      await API.post(`/reports/${reportId}/restore`, {}, adminRequest());
+      notifySuccess('Report restored to the map.');
+      await loadReports();
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Could not restore report';
       notifyError(`Failed: ${errorMsg}`);
     }
   }, [loadReports, notifyError, notifySuccess]);
@@ -134,12 +151,8 @@ export default function AdminPanel() {
   }
 
   const resolveEmergency = useCallback(async (emergencyId) => {
-    const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
-    const headers = {};
-    if (adminPassword) headers['x-admin-password'] = adminPassword;
-
     try {
-      await API.patch(`/emergency/${emergencyId}/resolve`, {}, { headers });
+      await API.patch(`/emergency/${emergencyId}/resolve`, {}, adminRequest());
       notifySuccess('Emergency marked as resolved.');
       loadEmergencies();
     } catch (err) {
@@ -175,18 +188,19 @@ export default function AdminPanel() {
         if (since) body.since = since;
       }
       
-      const adminPassword = sessionStorage.getItem('streetsense_admin_pwd');
       const response = await fetch(`${BACKEND_URL}/api/reports/export`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-password': adminPassword
+          Authorization: `Bearer ${getAdminToken()}`
         },
         body: JSON.stringify(body)
       });
-      
+
       if (!response.ok) {
-        notifyError('Failed to export CSV. Check your admin password.');
+        notifyError(response.status === 401
+          ? 'Admin session expired. Please sign in again.'
+          : 'Failed to export CSV.');
         return;
       }
       
@@ -210,13 +224,14 @@ export default function AdminPanel() {
     const map = { 
       open: { color: 'warning', icon: 'circle', label: 'Open' }, 
       verified: { color: 'info', icon: 'check-circle', label: 'Verified' },
+      resolved: { color: 'success', icon: 'check-circle', label: 'Resolved' },
       deleted: { color: 'danger', icon: 'trash', label: 'Deleted' }
     };
     const info = map[status] || { color: 'secondary', icon: 'help-circle', label: status };
     return (
       <span className={`badge bg-${info.color} text-uppercase d-inline-flex align-items-center gap-1`} title={info.label}>
         {status === 'open' && <AlertTriangle size={12} />}
-        {status === 'verified' && <CheckCircle size={12} />}
+        {(status === 'verified' || status === 'resolved') && <CheckCircle size={12} />}
         {status === 'deleted' && <Trash2 size={12} />}
         {status}
       </span>
@@ -266,7 +281,7 @@ export default function AdminPanel() {
           <p className="text-muted mb-0">Manage reports and emergency alerts</p>
         </div>
         <button className="btn btn-outline-danger d-flex align-items-center gap-2" onClick={() => {
-          sessionStorage.removeItem('streetsense_admin_pwd');
+          clearAdminToken();
           setAuthorized(false);
         }}>
           <LogOut size={18} /> Logout
@@ -333,6 +348,10 @@ export default function AdminPanel() {
                     <option value="garbage">Garbage</option>
                     <option value="noise">Noise</option>
                     <option value="stray">Stray</option>
+                    <option value="harassment">Harassment</option>
+                    <option value="eve-teasing">Eve-Teasing</option>
+                    <option value="assault">Assault</option>
+                    <option value="stalking">Stalking</option>
                     <option value="other">Other</option>
                   </select>
                 </div>
@@ -440,19 +459,48 @@ export default function AdminPanel() {
                             <ThumbsDown size={12} /> {r.downvotes || 0}
                           </span>
                         </div>
-                        <div className="d-flex justify-content-end border-top pt-2 mt-auto">
+                        <div className="d-flex justify-content-end gap-1 flex-wrap border-top pt-2 mt-auto">
                           {r.status !== 'deleted' ? (
-                            <button 
-                              className="btn btn-sm btn-outline-danger border-0 d-flex align-items-center gap-1" 
-                              onClick={() => confirmDelete(r._id)}
-                              title="Remove from map"
-                            >
-                              <Trash2 size={14} /> Remove from Map
-                            </button>
+                            <>
+                              {r.status !== 'verified' && (
+                                <button
+                                  className="btn btn-sm btn-outline-info border-0 d-flex align-items-center gap-1"
+                                  onClick={() => setReportStatus(r._id, 'verified')}
+                                  title="Confirm this report is genuine"
+                                >
+                                  <CheckCircle size={14} /> Verify
+                                </button>
+                              )}
+                              {r.status !== 'resolved' && (
+                                <button
+                                  className="btn btn-sm btn-outline-success border-0 d-flex align-items-center gap-1"
+                                  onClick={() => setReportStatus(r._id, 'resolved')}
+                                  title="Mark the underlying issue as fixed"
+                                >
+                                  <CheckCircle size={14} /> Resolved
+                                </button>
+                              )}
+                              <button
+                                className="btn btn-sm btn-outline-danger border-0 d-flex align-items-center gap-1"
+                                onClick={() => confirmDelete(r._id)}
+                                title="Remove from map"
+                              >
+                                <Trash2 size={14} /> Remove
+                              </button>
+                            </>
                           ) : (
-                            <span className="badge bg-secondary bg-opacity-10 text-secondary d-flex align-items-center gap-1">
-                              <Archive size={12} /> Archived
-                            </span>
+                            <>
+                              <span className="badge bg-secondary bg-opacity-10 text-secondary d-flex align-items-center gap-1">
+                                <Archive size={12} /> Archived
+                              </span>
+                              <button
+                                className="btn btn-sm btn-outline-primary border-0 d-flex align-items-center gap-1"
+                                onClick={() => restoreReport(r._id)}
+                                title="Put this report back on the map"
+                              >
+                                <RefreshCw size={14} /> Restore
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -520,7 +568,28 @@ export default function AdminPanel() {
                         </div>
                       </div>
 
-                      <a 
+                      {e.description && (
+                        <p className="small text-muted mb-3">{e.description}</p>
+                      )}
+
+                      {e.reporter && (e.reporter.name || e.reporter.phone) && (
+                        <div className="mb-3 small">
+                          <small className="text-muted d-block mb-1">Reported by</small>
+                          <div className="fw-bold">{e.reporter.name || 'Name not set'}</div>
+                          {e.reporter.phone && (
+                            <a href={`tel:${e.reporter.phone}`} className="d-inline-flex align-items-center gap-1">
+                              <Phone size={12} /> {e.reporter.phone}
+                            </a>
+                          )}
+                          {e.reporter.contacts?.length > 0 && (
+                            <div className="mt-1 text-muted">
+                              Emergency contacts: {e.reporter.contacts.map(c => `${c.name} (${c.phone})`).join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <a
                         href={`https://www.google.com/maps?q=${e.lat},${e.lng}`} 
                         target="_blank" 
                         rel="noopener noreferrer"

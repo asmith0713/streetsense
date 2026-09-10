@@ -45,7 +45,18 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
         })
-        .catch(() => caches.match('/') || caches.match(request))
+        .catch(async () => {
+          // caches.match always returns a promise, so the old `a || b` form
+          // never reached the fallback. Await each candidate in turn.
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          const shell = await caches.match('/');
+          if (shell) return shell;
+          return new Response('You are offline and this page has not been cached yet.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        })
     );
     return;
   }

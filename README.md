@@ -13,9 +13,9 @@ This project was developed by:
 
 - 👥 **Real-time Crowd Heatmap** - See where people are located for safer route planning
 - 🟢 **Safety Zones** - Green areas indicate more people = safer areas
-- 📍 **Location Broadcasting** - Opt-in to share your location and help create safe zones
+- 📍 **Location Broadcasting** - Opt in to share your location and help create safe zones (off until you accept)
 - 📊 **Active User Count** - Know how many people are nearby in real-time
-- 🔒 **Privacy First** - Location data auto-expires after 5 minutes
+- 🔒 **Privacy First** - Positions are rounded to ~150m, published only where several people are present, and deleted after 5 minutes
 - 🚨 **Safety Reports** - Report safety concerns and hazards with geolocation
 
 **Use Case**: Women can check the crowd heatmap before walking alone. Green areas show where more people are present, indicating safer routes.
@@ -25,7 +25,7 @@ This project was developed by:
 - 🗺️ **Interactive Map** - Report issues by clicking on the map
 - 🔥 **Issue Heat Maps** - Visualize problem density
 - 📊 **Clustering** - View grouped reports for better overview
-- 👍 **Community Upvoting** - Validate important issues
+- 👍 **Community Upvoting** - One vote per person per issue, changeable at any time
 - 🛡️ **Admin Panel** - Moderate and track issue resolution
 - 📱 **Responsive Design** - Works on all devices
 - 🔐 **User Authentication** - Email/password + Google OAuth sign-in
@@ -76,8 +76,8 @@ Edit `.env` with real values:
 | Variable | Description |
 | --- | --- |
 | `MONGO_URI` | Atlas or self-hosted Mongo connection string |
-| `JWT_SECRET` | Long random string for API auth |
-| `ADMIN_PASSWORD` | Password for `/admin` panel |
+| `JWT_SECRET` | Long random string for API auth (`openssl rand -base64 48`). Never commit it |
+| `ADMIN_PASSWORD` | Password for the `/admin` panel. Exchanged once for an 8-hour token; never commit it |
 | `GOOGLE_CLIENT_ID` & `REACT_APP_GOOGLE_CLIENT_ID` | Google OAuth client (same value) |
 | `PUBLIC_HOST` | Public domain or IP served by Caddy (no protocol) |
 | `BACKEND_PUBLIC_URL` | Full URL the backend advertises (e.g. `https://street-sense.app`) |
@@ -162,20 +162,37 @@ The Docker stack remains the authoritative way to deploy to test/prod.
 
 ### Reports
 - `GET /api/reports` - Get all reports (with filters)
-- `POST /api/reports` - Create new report (requires auth)
-- `POST /api/reports/:id/upvote` - Upvote report (requires auth)
-- `PUT /api/reports/:id/status` - Update status (requires auth)
-- `GET /api/reports/heat` - Get heatmap data
+- `POST /api/reports` - Create new report
+- `POST /api/reports/:id/upvote` - Upvote (requires sign-in; voting again clears the vote)
+- `POST /api/reports/:id/downvote` - Downvote (requires sign-in)
+- `GET /api/reports/votes/mine` - The signed-in user's own votes
+- `GET /api/reports/stats` - Public totals used by the landing page
+- `GET /api/reports/heat` - Get heatmap data (excludes removed reports)
 
 ### User Locations (Safety Feature)
-- `POST /api/locations` - Update user location for crowd heatmap (requires auth)
-- `GET /api/locations/heatmap` - Get crowd density heatmap data
-- `GET /api/locations/stats` - Get active user statistics
-- `DELETE /api/locations/mine` - Remove your location from map (requires auth)
+- `POST /api/locations` - Update your location for the crowd heatmap
+- `GET /api/locations/heatmap` - Aggregated crowd density. **Requires sign-in and a `bbox`.**
+  Positions are snapped to a ~150m grid and a cell is returned only once
+  `CROWD_MIN_CLUSTER` people share it, so the response cannot locate a person.
+- `GET /api/locations/stats` - Active user counts (no positions)
+- `DELETE /api/locations/mine` - Remove your device from the map immediately
+
+### Emergency
+- `POST /api/emergency` - Record an SOS with location. Returns helpline numbers and
+  reports how many of your contacts were actually messaged. **StreetSense does not
+  call emergency services for you.**
+- `GET /api/emergency/contacts` - Public helpline numbers
+- `GET /api/emergency/active` - Live SOS queue (**admin only**)
+- `PATCH /api/emergency/:id/resolve` - Close an alert (its author or an admin)
 
 ### Admin
-- `HEAD /api/reports/export` - Check admin auth
-- `POST /api/reports/export` - Export reports as CSV (requires admin password)
+All admin routes take `Authorization: Bearer <admin token>`.
+- `POST /api/auth/admin/login` - Exchange the admin password for an 8-hour token
+- `GET /api/reports/admin/all` - All reports, including removed ones
+- `PUT /api/reports/:id/status` - Set status to `open`, `verified` or `resolved`
+- `POST /api/reports/:id/restore` - Undo a removal
+- `DELETE /api/reports/:id` - Remove a report from the map (soft delete)
+- `POST /api/reports/export` - Export reports as CSV
 
 ### Query Parameters for Reports
 - `categories` - Filter by category (comma-separated)
@@ -188,8 +205,9 @@ The Docker stack remains the authoritative way to deploy to test/prod.
 ### For Citizens
 
 1. **Create Account**
-   - Navigate to `/auth`
-   - Register with email and password (min 6 chars)
+   - Navigate to `/signup`
+   - Register with an email and a password of at least 8 characters, including
+     a number and a special character (enforced on the server, not just the form)
 
 2. **Report an Issue**
    - Go to `/map`
@@ -205,13 +223,15 @@ The Docker stack remains the authoritative way to deploy to test/prod.
 ### For Admins
 
 1. **Access Admin Panel**
-   - Navigate to `/admin`
-   - Enter admin password (from `.env` file)
+   - Navigate to `/auth?admin=true`
+   - Enter the admin password (from `.env`). It is exchanged for a token that
+     expires after 8 hours; the password itself is not stored in the browser.
 
 2. **Moderate Reports**
-   - View all submitted reports
-   - Update status: Open → Verified → Resolved
-   - Filter and export data as CSV
+   - View all submitted reports, including removed ones
+   - Verify, resolve, remove, or restore a report
+   - Export data as CSV
+   - Watch the live SOS queue with the reporter's contact details
 
 ## Project Structure
 

@@ -9,6 +9,21 @@ async function seed() {
     console.error('.env MONGO_URI not set');
     process.exit(1);
   }
+
+  // This script deletes every report before inserting samples. Make that
+  // impossible to do by accident against a real database.
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Refusing to seed: NODE_ENV is production.');
+    process.exit(1);
+  }
+
+  if (!process.argv.includes('--force')) {
+    console.error('This will DELETE ALL REPORTS in:');
+    console.error(`  ${process.env.MONGO_URI.replace(/\/\/[^@]*@/, '//***@')}`);
+    console.error('Re-run with --force if that is what you want.');
+    process.exit(1);
+  }
+
   await mongoose.connect(process.env.MONGO_URI);
   await Report.deleteMany({});
 

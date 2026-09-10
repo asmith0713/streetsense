@@ -1,7 +1,9 @@
 export const setCookie = (name, value, days = 7) => {
   const safeDays = Number.isFinite(days) && days > 0 ? days : 7;
   const expires = new Date(Date.now() + safeDays * 864e5).toUTCString();
-  document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax';
+  // Secure wherever the page itself is served over HTTPS.
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax' + secure;
 };
 
 export const getCookie = (name) => {
@@ -12,5 +14,6 @@ export const getCookie = (name) => {
 };
 
 export const removeCookie = (name) => {
-  document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax' + secure;
 };

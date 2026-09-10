@@ -3,13 +3,14 @@ import API from '../api';
 import { resolveImageUrl } from '../utils/imageHelper';
 import { ThumbsUp, ThumbsDown, Clock, Tag, Image as ImageIcon, AlertTriangle, CheckCircle } from 'lucide-react';
 
-export default function ReportCard({ report, onUpdated }) {
+export default function ReportCard({ report, onUpdated, initialVote = null, onVoted }) {
   const [upvotes, setUpvotes] = useState(report.upvotes || 0);
   const [downvotes, setDownvotes] = useState(report.downvotes || 0);
   const status = report.status || 'open';
   const [imageError, setImageError] = useState(false);
   const [voting, setVoting] = useState(false);
-  const [userVote, setUserVote] = useState(null); // 'up', 'down', or null
+  const [userVote, setUserVote] = useState(initialVote); // 'up', 'down', or null
+  const [voteError, setVoteError] = useState('');
 
   // Sync vote counts when parent re-fetches data (props change)
   const prevReportRef = useRef(report._id);
@@ -19,41 +20,40 @@ export default function ReportCard({ report, onUpdated }) {
     setDownvotes(report.downvotes || 0);
     // Reset vote state when switching to a different report
     if (prevReportRef.current !== report._id) {
-      setUserVote(null);
+      setUserVote(initialVote);
       setImageError(false);
       prevReportRef.current = report._id;
     }
-  }, [report._id, report.upvotes, report.downvotes]);
+  }, [report._id, report.upvotes, report.downvotes, initialVote]);
 
   const imageSrc = resolveImageUrl(report.photoUrl);
 
   async function handleVote(voteType) {
     if (voting) return; // Prevent double-click
     
-    // Validate report ID
     if (!report._id || report._id === 'undefined') {
-      console.error('Invalid report ID:', report._id);
-      alert('Cannot vote: Invalid report ID');
+      setVoteError('This report cannot be voted on.');
       return;
-    }
-    
-    // If user clicks same vote, remove their vote
-    if (userVote === voteType) {
-      return; // Already voted this way
     }
 
     setVoting(true);
+    setVoteError('');
     try {
+      // Voting the same way again clears the vote; the server is authoritative.
       const endpoint = voteType === 'up' ? 'upvote' : 'downvote';
       const res = await API.post(`/reports/${report._id}/${endpoint}`);
       setUpvotes(res.data.upvotes || 0);
       setDownvotes(res.data.downvotes || 0);
-      setUserVote(voteType);
+      setUserVote(res.data.userVote ?? null);
+      if (onVoted) onVoted(report._id, res.data.userVote ?? null);
       if (onUpdated) onUpdated();
     } catch (err) {
-      console.error(`${voteType}vote failed`, err);
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Network error';
-      alert(`Failed to ${voteType}vote: ${errorMsg}`);
+      const status = err.response?.status;
+      setVoteError(
+        status === 401
+          ? 'Sign in to vote on reports.'
+          : err.response?.data?.error || 'Could not record your vote. Try again.'
+      );
     } finally {
       setVoting(false);
     }
@@ -65,12 +65,13 @@ export default function ReportCard({ report, onUpdated }) {
       verified: 'info',
       resolved: 'success'
     };
+
     const color = statusColors[status] || 'secondary';
     
     return (
       <span className={`badge bg-${color} text-uppercase d-flex align-items-center gap-1`} style={{fontSize: '0.7rem'}}>
         {status === 'open' && <AlertTriangle size={10} />}
-        {status === 'verified' && <CheckCircle size={10} />}
+        {(status === 'verified' || status === 'resolved') && <CheckCircle size={10} />}
         {status}
       </span>
     );
@@ -115,6 +116,10 @@ export default function ReportCard({ report, onUpdated }) {
           <div>Image unavailable</div>
         </div>
       ) : null}
+
+      {voteError && (
+        <div className="alert alert-warning py-1 px-2 mt-2 mb-0 small">{voteError}</div>
+      )}
 
       <div className="d-flex align-items-center justify-content-between mt-2">
         <div className="btn-group shadow-sm" role="group">

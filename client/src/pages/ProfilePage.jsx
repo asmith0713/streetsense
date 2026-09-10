@@ -119,16 +119,14 @@ export default function ProfilePage() {
   };
 
   const updateEmergencyContact = (index, field, value) => {
-    const contacts = [...profile.emergencyContacts];
-    contacts[index][field] = value;
-    
-    // If setting as primary, unset others
-    if (field === 'isPrimary' && value) {
-      contacts.forEach((c, i) => {
-        if (i !== index) c.isPrimary = false;
-      });
-    }
-    
+    // Copy each contact rather than mutating the objects held in state.
+    const contacts = profile.emergencyContacts.map((contact, i) => {
+      if (i === index) return { ...contact, [field]: value };
+      // Only one contact can be primary.
+      if (field === 'isPrimary' && value) return { ...contact, isPrimary: false };
+      return contact;
+    });
+
     setProfile({ ...profile, emergencyContacts: contacts });
   };
 
@@ -339,7 +337,7 @@ export default function ProfilePage() {
                       placeholder="e.g., 123456789 or @username"
                     />
                     <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-                      For instant emergency alerts
+                      Used to send this contact an SOS alert, when the server has Telegram enabled
                     </small>
                   </div>
                   <div className="col-md-6">

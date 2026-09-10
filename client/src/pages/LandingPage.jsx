@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import API from '../api';
 import './LandingPage.css';
 
 /* ── Intersection Observer hook ────────────────────── */
@@ -44,6 +45,30 @@ function useCountUp(end, duration = 2000, ref) {
   }, [end, duration, isVisible]);
 
   return count;
+}
+
+/* ── Live platform stats ───────────────────────────── */
+function useLiveStats() {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      API.get('/reports/stats').then(r => r.data).catch(() => null),
+      API.get('/locations/stats').then(r => r.data).catch(() => null)
+    ]).then(([reports, crowd]) => {
+      if (cancelled || !reports) return;
+      setStats({
+        total: reports.total ?? 0,
+        resolved: reports.resolved ?? 0,
+        categories: reports.categories ?? 0,
+        activeUsers: crowd?.activeUsers ?? 0
+      });
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  return stats;
 }
 
 /* ── Stat card ─────────────────────────────────────── */
@@ -103,6 +128,7 @@ function FadeUp({ children, delay = 0, className = '' }) {
 export default function LandingPage() {
   const navigate = useNavigate();
   const [openFaq, setOpenFaq] = useState(null);
+  const stats = useLiveStats();
   const [darkMode, setDarkMode] = useState(() => {
     return document.documentElement.getAttribute('data-theme') === 'dark' ||
       localStorage.getItem('theme') === 'dark';
@@ -167,10 +193,10 @@ export default function LandingPage() {
       {/* ─── STATS ────────────────────────────────── */}
       <section className="stats-section">
         <div className="stats-grid">
-          <StatCard icon="📍" value={100} suffix="+" label="Issues Reported" delay={0} />
-          <StatCard icon="👥" value={20} suffix="+" label="Active Citizens" delay={0.1} />
-          <StatCard icon="✅" value={140} suffix="+" label="Issues Resolved" delay={0.2} />
-          <StatCard icon="🏙️" value={25} suffix="+" label="Cities Covered" delay={0.3} />
+          <StatCard icon="📍" value={stats?.total ?? 0} label="Issues Reported" delay={0} />
+          <StatCard icon="👥" value={stats?.activeUsers ?? 0} label="On the Map Now" delay={0.1} />
+          <StatCard icon="✅" value={stats?.resolved ?? 0} label="Issues Resolved" delay={0.2} />
+          <StatCard icon="🗂️" value={stats?.categories ?? 0} label="Issue Types Reported" delay={0.3} />
         </div>
       </section>
 
@@ -201,7 +227,7 @@ export default function LandingPage() {
             { icon: '🔥', title: 'Heat Maps', desc: 'See problem hotspots at a glance with real-time color-coded zones.', link: '/map', cta: 'View map' },
             { icon: '👥', title: 'Live Crowd Tracking', desc: 'See active users in real-time. Find safer, well-populated areas.', link: '/signup', cta: 'Join map' },
             { icon: '👍', title: 'Voting System', desc: 'Upvote issues to prioritise them. Community-driven decision making.', link: '/signup', cta: 'Start voting' },
-            { icon: '🚨', title: 'Emergency SOS', desc: 'One-click emergency with GPS sharing, quick-dial, and Telegram alerts.', link: '/account', cta: 'Setup SOS' },
+            { icon: '🚨', title: 'Emergency SOS', desc: 'One tap records your location, alerts your saved contacts, and puts the helpline numbers one tap away.', link: '/account', cta: 'Setup SOS' },
             // { icon: '🔔', title: 'Instant Alerts', desc: 'Telegram notifications for emergencies. Keep your contacts informed.', link: '/signup', cta: 'Get alerts' },
           ].map((f, i) => (
             <FadeUp key={i} delay={i * 0.08}>
@@ -223,10 +249,10 @@ export default function LandingPage() {
         </FadeUp>
         <div className="trust-grid">
           {[
-            { icon: '🔒', title: 'Anonymous Reports', desc: 'No personal data attached to any report' },
+            { icon: '🔒', title: 'Anonymous Reports', desc: 'Reports carry no name, and photo location data is stripped on upload' },
             { icon: '🌐', title: 'Open Source', desc: 'Transparent code anyone can inspect' },
             // { icon: '📱', title: 'Works Offline', desc: 'Installable PWA with offline support' },
-            { icon: '⚡', title: 'Real-Time', desc: 'WebSocket-powered live updates' },
+            { icon: '⚡', title: 'Kept Current', desc: 'The map refreshes every few seconds as reports come in' },
           ].map((b, i) => (
             <FadeUp key={i} delay={i * 0.08}>
               <div className="trust-badge">
@@ -248,9 +274,9 @@ export default function LandingPage() {
           {[
             { q: 'How do I report an issue?', a: 'Click anywhere on the map → select category (pothole/garbage/safety) → upload photo (optional) → add description → submit. Report appears immediately.' },
             { q: 'What do the heat maps show?', a: 'Red = high concentration of reports. Yellow = medium. Green = low. Toggle between issue heat map and crowd density map in the map view.' },
-            { q: 'How does voting work?', a: 'Click on any report marker → click upvote button. One vote per user per issue. Higher votes help authorities prioritize which issues to fix first.' },
-            { q: 'Is the emergency SOS feature live?', a: 'Yes. Set up emergency contacts in your profile (including Telegram IDs). Press SOS button → your location is shared + emergency alert sent via Telegram.' },
-            { q: 'Can I see who reported what?', a: 'No. Reports are anonymous by design. Only timestamps, categories, and vote counts are public.' },
+            { q: 'How does voting work?', a: 'Open any report marker and use the arrows. You get one vote per report - tap the same arrow again to undo it, or the other to change your mind. Higher-voted issues help authorities decide what to fix first.' },
+            { q: 'What happens when I press SOS?', a: 'Your location and the type of emergency are recorded, any emergency contacts with a Telegram ID are messaged, and the police, women\u2019s helpline and ambulance numbers appear for you to dial. StreetSense does not call emergency services on your behalf \u2014 always call them yourself.' },
+            { q: 'Can I see who reported what?', a: 'No. Reports are anonymous by design. Only timestamps, categories, and vote counts are public, and metadata is removed from uploaded photos.' },
           ].map((item, i) => (
             <FadeUp key={i} delay={i * 0.05}>
               <div className="faq-item">
